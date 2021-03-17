@@ -1,0 +1,18 @@
+---
+- name: Running Horizon bootstrap container
+  vars:
+    horizon: "{{ horizon_services['horizon'] }}"
+  become: true
+  containers.podman.podman_container:
+    name: "bootstrap_horizon"
+    detach: False
+    env:
+      KOLLA_BOOTSTRAP:
+      KOLLA_CONFIG_STRATEGY: "{{ config_strategy }}"
+    image: "{{ horizon.image }}"
+    labels:
+      BOOTSTRAP:
+    volumes: "{{ horizon.volumes }}"
+    rm: true
+  run_once: True
+  delegate_to: "{{ groups[horizon.group][0] }}"

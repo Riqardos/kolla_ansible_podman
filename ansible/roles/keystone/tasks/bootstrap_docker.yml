@@ -1,5 +1,5 @@
 ---
-- name: Creating placement databases
+- name: Creating keystone database
   become: true
   kolla_toolbox:
     module_name: mysql_db
@@ -8,13 +8,13 @@
       login_port: "{{ database_port }}"
       login_user: "{{ database_user }}"
       login_password: "{{ database_password }}"
-      name: "{{ placement_database_name }}"
+      name: "{{ keystone_database_name }}"
   run_once: True
-  delegate_to: "{{ groups['placement-api'][0] }}"
+  delegate_to: "{{ groups['keystone'][0] }}"
   when:
     - not use_preconfigured_databases | bool
 
-- name: Creating placement databases user and setting permissions
+- name: Creating Keystone database user and setting permissions
   become: true
   kolla_toolbox:
     module_name: mysql_user
@@ -23,13 +23,13 @@
       login_port: "{{ database_port }}"
       login_user: "{{ database_user }}"
       login_password: "{{ database_password }}"
-      name: "{{ placement_database_user }}"
-      password: "{{ placement_database_password }}"
+      name: "{{ keystone_database_user }}"
+      password: "{{ keystone_database_password }}"
       host: "%"
-      priv: "{{ placement_database_name }}.*:ALL"
+      priv: "{{ keystone_database_name }}.*:ALL"
       append_privs: "yes"
   run_once: True
-  delegate_to: "{{ groups['placement-api'][0] }}"
+  delegate_to: "{{ groups['keystone'][0] }}"
   when:
     - not use_preconfigured_databases | bool
 

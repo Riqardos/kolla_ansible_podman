@@ -7,4 +7,17 @@
   when:
     - kolla_action != "config"
     - inventory_hostname == item
+    - kolla_container_engine == 'docker'
+  loop: "{{ groups[service.group] }}"
+
+
+- name: Restart rabbitmq container
+  vars:
+    service_name: "rabbitmq"
+    service: "{{ rabbitmq_services[service_name] }}"
+  include_tasks: 'restart_services_podman.yml'
+  when:
+    - kolla_action != "config"
+    - inventory_hostname == item
+    - kolla_container_engine == 'podman'
   loop: "{{ groups[service.group] }}"

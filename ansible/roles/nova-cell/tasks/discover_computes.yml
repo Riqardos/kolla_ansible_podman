@@ -26,7 +26,7 @@
 - name: Waiting for nova-compute services to register themselves
   become: true
   command: >
-    docker exec kolla_toolbox openstack
+    {{ kolla_container_engine }} exec kolla_toolbox openstack
     --os-interface {{ openstack_interface }}
     --os-auth-url {{ keystone_admin_url }}
     --os-identity-api-version 3
@@ -73,6 +73,6 @@
 - name: Discover nova hosts
   become: true
   command: >
-    docker exec nova_conductor nova-manage cell_v2 discover_hosts --by-service --cell_uuid {{ nova_cell_settings.cell_uuid }}
+    {{ kolla_container_engine }} exec nova_conductor nova-manage cell_v2 discover_hosts --by-service --cell_uuid {{ nova_cell_settings.cell_uuid }}
   changed_when: False
   delegate_to: "{{ groups[nova_cell_conductor_group][0] }}"

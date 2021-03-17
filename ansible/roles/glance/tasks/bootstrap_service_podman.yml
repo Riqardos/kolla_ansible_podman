@@ -1,0 +1,56 @@
+---
+- name: Enable log_bin_trust_function_creators function
+  command: podman exec -t kolla_toolbox /opt/ansible/bin/ansible localhost
+    -m mysql_variables
+    -a "login_host='{{ database_address }}'
+    login_port='{{ database_port }}'
+    login_user='{{ database_user }}'
+    login_password='{{ database_password }}'
+    variable='log_bin_trust_function_creators'
+    value=1"
+  run_once: true
+  delegate_to: "{{ glance_api_hosts[0] }}"
+  when:
+    - not use_preconfigured_databases | bool
+
+- name: Running Glance bootstrap container
+  vars:
+    glance_api: "{{ glance_services['glance-api'] }}"
+  become: true
+  containers.podman.podman_container:
+    detach: False
+    env:
+      KOLLA_BOOTSTRAP:
+      KOLLA_CONFIG_STRATEGY: "{{ config_strategy }}"
+    image: "{{ glance_api.image }}"
+    labels:
+      BOOTSTRAP:
+    name: "bootstrap_glance"
+    volumes: "{{ glance_api.volumes|reject('equalto', '')|list }}"
+    network: "host"
+    rm: true
+  run_once: true
+  delegate_to: "{{ glance_api_hosts[0] }}"
+
+- name: Disable log_bin_trust_function_creators function
+  command:
+    podman exec -t kolla_toolbox /opt/ansible/bin/ansible localhost
+    -m mysql_variables
+    -a "login_host='{{ database_address }}'
+    login_port='{{ database_port }}'
+    login_user='{{ database_user }}'
+    login_password='{{ database_password }}'
+    variable='log_bin_trust_function_creators'
+    value=0"
+    # module_name: mysql_variables
+    # module_args:
+    #   login_host: "{{ database_address }}"
+    #   login_port: "{{ database_port }}"
+    #   login_user: "{{ database_user }}"
+    #   login_password: "{{ database_password }}"
+    #   variable: log_bin_trust_function_creators
+    #   value: 0
+  run_once: true
+  delegate_to: "{{ glance_api_hosts[0] }}"
+  when:
+    - not use_preconfigured_databases | bool

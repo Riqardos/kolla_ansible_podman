@@ -2,6 +2,10 @@
 - import_tasks: config.yml
 
 - import_tasks: check-containers.yml
+  when: kolla_container_engine == 'docker'
+
+- import_tasks: check-containers-podman.yml
+  when: kolla_container_engine == 'podman'
 
 - include_tasks: clone.yml
   when:

@@ -1,4 +1,12 @@
 ---
+- name: Create MariaDB volume
+  become: true
+  kolla_docker:
+    action: "create_volume"
+    common_options: "{{ docker_common_options }}"
+    name: "mariadb"
+  register: mariadb_volume
+
 - name: Check mariadb containers
   become: true
   kolla_docker:
@@ -7,6 +15,9 @@
     name: "{{ item.value.container_name }}"
     image: "{{ item.value.image }}"
     volumes: "{{ item.value.volumes }}"
+    privileged: yes
+    env:
+      KOLLA_CONFIG_STRATEGY: "{{ config_strategy }}"
     dimensions: "{{ item.value.dimensions }}"
   when:
     - inventory_hostname in groups[item.value.group]

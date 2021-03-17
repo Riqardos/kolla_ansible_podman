@@ -2,6 +2,7 @@
 - name: Taking {{ mariadb_backup_type }} database backup via Mariabackup
   become: true
   kolla_docker:
+  containers.podman.podman_container:
     action: "start_container"
     command: "bash -c 'sudo -E kolla_set_configs && /usr/local/bin/kolla_mariadb_backup.sh'"
     common_options: "{{ docker_common_options }}"
@@ -12,6 +13,7 @@
     remove_on_exit: True
     environment:
       BACKUP_TYPE: "{{ mariadb_backup_type }}"
+      KOLLA_CONFIG_STRATEGY: "{{ config_strategy }}"
     volumes:
       - "{{ node_config_directory }}/mariabackup/:{{ container_config_directory }}/:ro"
       - "/etc/localtime:/etc/localtime:ro"
@@ -20,3 +22,25 @@
       - "kolla_logs:/var/log/kolla/"
   when:
     - inventory_hostname == mariadb_backup_host
+    - kolla_container_engine == 'docker'
+
+- name: Taking {{ mariadb_backup_type }} database backup via Mariabackup
+  become: true
+  containers.podman.podman_container:
+    command: "bash -c 'sudo -E kolla_set_configs && /usr/local/bin/kolla_mariadb_backup.sh'"
+    detach: False
+    image: "{{ mariabackup_image_full }}"
+    name: "mariabackup"
+    rm: Yes
+    environment:
+      BACKUP_TYPE: "{{ mariadb_backup_type }}"
+      KOLLA_CONFIG_STRATEGY: "{{ config_strategy }}"
+    volumes:
+      - "{{ node_config_directory }}/mariabackup/:{{ container_config_directory }}/:ro"
+      - "/etc/localtime:/etc/localtime:ro"
+      - "mariadb:/var/lib/mysql"
+      - "mariadb_backup:/backup"
+      - "kolla_logs:/var/log/kolla/"
+  when:
+    - inventory_hostname == mariadb_backup_host
+    - kolla_container_engine == 'podman'

@@ -1,0 +1,37 @@
+---
+# - name: Check memcached container
+#   vars:
+#     service: "{{ memcached_services.memcached }}"
+#   become: true
+#   kolla_docker:
+#     action: "compare_container"
+#     common_options: "{{ docker_common_options }}"
+#     name: "{{ service.container_name }}"
+#     image: "{{ service.image }}"
+#     volumes: "{{ service.volumes }}"
+#     dimensions: "{{ service.dimensions }}"
+#   when:
+#     - inventory_hostname in groups[service.group]
+#     - service.enabled | bool
+#   notify: Restart memcached container
+  
+
+- name: Create memcached service
+  vars:
+    container_image_list: 
+      - "{{ memcached_services.memcached.image }}"
+    container_name: "{{ memcached_services.memcached.container_name }}"
+    container_run_args: >-
+      --label "io.containers.autoupdate=image"
+      -v "{{ node_config_directory }}/memcached/:{{ container_config_directory }}/:ro"
+      -v "/etc/localtime:/etc/localtime:ro"
+      -v "kolla_logs:/var/log/kolla"
+      --env KOLLA_CONFIG_STRATEGY=COPY_ALWAYS
+      --privileged
+      --network host
+    container_state: running
+  include_role:
+    name: podman-container-systemd
+  when:
+    - inventory_hostname in groups[memcached_services.memcached.group]
+    - memcached_services.memcached.enabled | bool

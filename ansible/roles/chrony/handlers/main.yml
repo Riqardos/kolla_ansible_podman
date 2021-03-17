@@ -14,3 +14,22 @@
     dimensions: "{{ service.dimensions }}"
   when:
     - kolla_action != "config"
+    - kolla_container_engine == 'docker'
+
+- name: Restart chrony container
+  vars:
+    service_name: "chrony"
+    service: "{{ chrony_services[service_name] }}"
+  become: true
+
+  containers.podman.podman_container:
+    restart: yes
+    privileged: "{{ service.privileged }}"
+    name: "{{ service.container_name }}"
+    image: "{{ service.image }}"
+    volumes: "{{ service.volumes }}"
+    env:
+      KOLLA_CONFIG_STRATEGY: "{{ config_strategy }}"
+  when:
+    - kolla_container_engine == 'podman'
+    - kolla_action != "config"

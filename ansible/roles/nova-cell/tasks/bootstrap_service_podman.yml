@@ -1,0 +1,20 @@
+---
+- name: Running Nova cell bootstrap container
+  become: true
+  vars:
+    nova_conductor: "{{ nova_cell_services['nova-conductor'] }}"
+  containers.podman.podman_container:
+    rm: yes
+    detach: False
+    env:
+      KOLLA_UPGRADE:
+      KOLLA_CONFIG_STRATEGY: "{{ config_strategy }}"
+    image: "{{ nova_conductor.image }}"
+    labels:
+      BOOTSTRAP:
+    name: "nova_cell_bootstrap"
+    volumes: "{{ nova_cell_bootstrap_default_volumes + nova_cell_bootstrap_extra_volumes }}"
+    network: "host"
+  register: bootstrap_result
+  changed_when: bootstrap_result.stdout | default("") | length > 0
+  when: inventory_hostname == groups[nova_cell_conductor_group][0]

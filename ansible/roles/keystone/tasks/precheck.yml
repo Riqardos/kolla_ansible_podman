@@ -12,6 +12,16 @@
       - keystone
       - keystone_ssh
   register: container_facts
+  when: kolla_container_engine == 'docker'
+
+- name: Get container facts
+  become: true
+  kolla_container_facts_podman:
+    name:
+      - keystone
+      - keystone_ssh
+  register: container_facts
+  when: kolla_container_engine == 'podman'
 
 - name: Checking free port for Keystone Admin
   wait_for:

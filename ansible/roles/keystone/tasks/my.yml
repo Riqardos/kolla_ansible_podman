@@ -1,0 +1,13 @@
+---
+- name: Creating keystone database
+  become: true
+  kolla_toolbox_podman:
+    module_name: mysql_db
+    module_args:
+      login_host: "172.16.1.99"
+      login_port: "{{ database_port }}"
+      login_user: "{{ database_user }}"
+      login_password: "xXAR0TJYPCp5YBELxLcbQz5f29Mhx2JbRyoFJgUM"
+      name: "keystone"
+
+# ansible    localhost -m mysql_db -a "login_host='172.16.1.99' login_port='3306' login_user='root' login_password='xXAR0TJYPCp5YBELxLcbQz5f29Mhx2JbRyoFJgUM' name='keystone'"

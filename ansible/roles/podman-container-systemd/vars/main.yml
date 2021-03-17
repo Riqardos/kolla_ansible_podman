@@ -1,0 +1,6 @@
+---
+
+# systemd service name
+cidpid_base: "{{ systemd_tempdir }}/%n-"
+cidfile: "{{ cidpid_base }}cid"
+pidfile: "{{ cidpid_base }}pid"

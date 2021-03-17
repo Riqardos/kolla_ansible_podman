@@ -6,5 +6,15 @@
     common_options: "{{ docker_common_options }}"
     image: "{{ item.value.image }}"
   when:
+    - kolla_container_engine == 'docker'
     - item.value | service_enabled_and_mapped_to_host
+  with_dict: "{{ common_services }}"
+
+# Podman pull
+- name: Pulling common images images using podman
+  podman_image:
+    name: "{{ item.value.image }}"
+  when:
+    - kolla_container_engine == 'podman'
+    - item.value 
   with_dict: "{{ common_services }}"

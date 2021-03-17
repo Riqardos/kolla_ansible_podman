@@ -1,0 +1,41 @@
+---
+- name: Creating Neutron database
+  become: true
+  command: podman exec -t kolla_toolbox /opt/ansible/bin/ansible localhost 
+    -m mysql_db
+    -a "login_host='{{ database_address }}'
+      login_port='{{ database_port }}'
+      login_user='{{ database_user }}'
+      login_password='{{ database_password }}'
+      name='{{ neutron_database_name }}'"
+    # module_name: mysql_db
+    # module_args:
+    #   login_host: "{{ database_address }}"
+    #   login_port: "{{ database_port }}"
+    #   login_user: "{{ database_user }}"
+    #   login_password: "{{ database_password }}"
+    #   name: "{{ neutron_database_name }}"
+  run_once: True
+  delegate_to: "{{ groups['neutron-server'][0] }}"
+  when:
+    - not use_preconfigured_databases | bool
+
+- name: Creating Neutron database user and setting permissions
+  become: true
+  command: podman exec -t kolla_toolbox /opt/ansible/bin/ansible localhost 
+    -m mysql_user 
+    -a "login_host='{{ database_address }}'
+      login_port='{{ database_port }}'
+      login_user='{{ database_user }}'
+      login_password='{{ database_password }}'
+      name='{{ neutron_database_user }}'
+      password='{{  neutron_database_password }}'
+      host='%'
+      priv='{{ neutron_database_name }}.*:ALL'
+      append_privs=yes"
+  run_once: True
+  delegate_to: "{{ groups['neutron-server'][0] }}"
+  when:
+    - not use_preconfigured_databases | bool
+
+- import_tasks: bootstrap_service_podman.yml

@@ -1,0 +1,20 @@
+---
+- name: Running Neutron bootstrap container
+  vars:
+    neutron_server: "{{ neutron_services['neutron-server'] }}"
+  become: true
+  containers.podman.podman_container:
+    detach: False
+    env:
+      KOLLA_BOOTSTRAP:
+      KOLLA_CONFIG_STRATEGY: "{{ config_strategy }}"
+      NEUTRON_BOOTSTRAP_SERVICES: "{{ neutron_bootstrap_services | join(' ') }}"
+    image: "{{ neutron_server.image }}"
+    labels:
+      BOOTSTRAP:
+    name: "bootstrap_neutron"
+    volumes: "{{ neutron_server.volumes }}"
+    network: "host"
+    rm: yes
+  run_once: True
+  delegate_to: "{{ groups[neutron_server.group][0] }}"

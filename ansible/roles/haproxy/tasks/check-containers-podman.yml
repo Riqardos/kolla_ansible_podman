@@ -1,0 +1,68 @@
+---
+# - name: Check haproxy containers
+#   become: true
+#   #kolla_docker:
+#   containers.podman.podman_container:
+#     #action: "compare_container"
+#     #common_options: "{{ docker_common_options }}"
+#     network: "host"
+#     name: "{{ item.value.container_name }}"
+#     image: "{{ item.value.image }}"
+#     volumes: "{{ item.value.volumes }}"
+#     #dimensions: "{{ item.value.dimensions }}"
+#     privileged: yes
+#     # privileged: "{{ item.value.privileged | default(False) }}"
+#     env:
+#       KOLLA_CONFIG_STRATEGY: "{{ config_strategy }}"
+#   when:
+#     - inventory_hostname in groups[item.value.group]
+#     - item.value.enabled | bool
+#   with_dict: "{{ haproxy_services }}"
+#   #notify:
+#   #  - "Restart {{ item.key }} container"
+
+
+- name: Create haproxy service
+  vars:
+    container_image_list: 
+      - "{{ haproxy_services.haproxy.image }}"
+    container_name: "{{ haproxy_services.haproxy.container_name }}"
+    container_run_args: >-
+      --label "io.containers.autoupdate=image"
+      -v "{{ node_config_directory }}/haproxy/:{{ container_config_directory }}/:ro"
+      -v "/etc/localtime:/etc/localtime:ro"
+      -v "kolla_logs:/var/log/kolla"
+      -v "haproxy_socket:/var/lib/kolla/haproxy/"
+      --env KOLLA_CONFIG_STRATEGY=COPY_ALWAYS
+      --privileged
+      --network host
+    container_state: running
+  include_role:
+    name: podman-container-systemd
+  when:
+    - inventory_hostname in groups[haproxy_services.haproxy.group]
+    - haproxy_services.haproxy.enabled | bool
+
+
+
+- name: Create keepalived service
+  vars:
+    container_image_list: 
+      - "{{ haproxy_services.keepalived.image }}"
+    container_name: "{{ haproxy_services.keepalived.container_name }}"
+    container_run_args: >-
+      --label "io.containers.autoupdate=image"
+      -v "{{ node_config_directory }}/keepalived/:{{ container_config_directory }}/:ro"
+      -v "/etc/localtime:/etc/localtime:ro"
+      -v "kolla_logs:/var/log/kolla"
+      -v "haproxy_socket:/var/lib/kolla/haproxy/"
+      -v "/lib/modules:/lib/modules:ro"
+      --env KOLLA_CONFIG_STRATEGY=COPY_ALWAYS
+      --privileged
+      --network host
+    container_state: running
+  include_role:
+    name: podman-container-systemd
+  when:
+    - inventory_hostname in groups[haproxy_services.keepalived.group]
+    - haproxy_services.keepalived.enabled | bool

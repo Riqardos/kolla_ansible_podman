@@ -6,12 +6,14 @@
   kolla_docker:
     action: "compare_container"
     common_options: "{{ docker_common_options }}"
+    state: present
     name: "{{ horizon.container_name }}"
     image: "{{ horizon.image }}"
     environment: "{{ horizon.environment }}"
     volumes: "{{ horizon.volumes }}"
     dimensions: "{{ horizon.dimensions }}"
     healthcheck: "{{ horizon.healthcheck | default(omit) }}"
+    network: "host"
   when:
     - inventory_hostname in groups[horizon.group]
     - horizon.enabled | bool

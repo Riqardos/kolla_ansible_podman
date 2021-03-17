@@ -6,6 +6,17 @@
     common_options: "{{ docker_common_options }}"
     image: "{{ item.value.image }}"
   when:
+    - kolla_container_engine == 'docker'
+    - inventory_hostname in groups[item.value.group]
+    - item.value.enabled | bool
+  with_dict: "{{ heat_services }}"
+
+# Podman pull
+- name: Pulling heat images using podman
+  podman_image:
+    name: "{{ item.value.image }}"
+  when:
+    - kolla_container_engine == 'podman'
     - inventory_hostname in groups[item.value.group]
     - item.value.enabled | bool
   with_dict: "{{ heat_services }}"

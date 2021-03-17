@@ -1,5 +1,9 @@
 ---
 - import_tasks: check-containers.yml
+  when: kolla_container_engine == 'docker'
+
+- import_tasks: check-containers-podman.yml
+  when: kolla_container_engine == 'podman'
 
 # NOTE(yoctozepto): handlers prerequisite
 - import_tasks: lookup_cluster.yml

@@ -8,4 +8,15 @@
   when:
     - inventory_hostname in groups[item.value.group]
     - item.value.enabled | bool
+    - kolla_container_engine == 'docker'
+  with_dict: "{{ keystone_services }}"
+
+- name: Pulling keystone images
+  become: true
+  podman_image:
+    name: "{{ item.value.image }}"
+  when:
+    - inventory_hostname in groups[item.value.group]
+    - item.value.enabled | bool
+    - kolla_container_engine == 'podman'
   with_dict: "{{ keystone_services }}"

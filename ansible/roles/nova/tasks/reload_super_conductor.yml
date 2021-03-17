@@ -18,3 +18,23 @@
     - kolla_action == 'upgrade'
     - inventory_hostname in groups[service.group]
     - service.enabled | bool
+    - kolla_container_engine == 'docker'
+  
+
+- name: Reload nova super conductor services to remove RPC version pin
+  vars:
+    service: "{{ nova_services['nova-super-conductor'] }}"
+  become: true
+  containers.podman.podman_container:
+    state: started
+    restart: yes
+    network: "host"
+    name: "{{ service.container_name }}"
+    image: "{{ service.image }}"
+    privileged: "{{ service.privileged | default(False) }}"
+    volumes: "{{ service.volumes|reject('equalto', '')|list }}"
+  when:
+    - kolla_action == 'upgrade'
+    - inventory_hostname in groups[service.group]
+    - service.enabled | bool
+    - kolla_container_engine == 'podman'

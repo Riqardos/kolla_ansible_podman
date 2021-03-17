@@ -1,0 +1,49 @@
+---
+# - name: Check placement containers
+#   become: true
+#   kolla_docker:
+#     action: "compare_container"
+#     common_options: "{{ docker_common_options }}"
+#     name: "{{ item.value.container_name }}"
+#     image: "{{ item.value.image }}"
+#     environment: "{{ item.value.environment|default(omit) }}"
+#     pid_mode: "{{ item.value.pid_mode|default('') }}"
+#     ipc_mode: "{{ item.value.ipc_mode|default(omit) }}"
+#     privileged: "{{ item.value.privileged|default(False) }}"
+#     volumes: "{{ item.value.volumes|reject('equalto', '')|list }}"
+#     dimensions: "{{ item.value.dimensions }}"
+#     healthcheck: "{{ item.value.healthcheck | default(omit) }}"
+#   when:
+#     - inventory_hostname in groups[item.value.group]
+#     - item.value.enabled | bool
+#   with_dict: "{{ placement_services }}"
+#   notify:
+#     - "Restart {{ item.key }} container"
+    
+
+    # IPC value manualy set to private 
+    # PID mode missing because its empty in base deployment
+- name: Create placement-api service
+  vars:
+    container_image_list: 
+      - "{{ dict_item.value.image }}"
+    container_name: "{{ dict_item.value.container_name }}"
+    container_run_args: >-
+      --label "io.containers.autoupdate=image"
+      -v "{{ node_config_directory }}/placement-api/:{{ container_config_directory }}/:ro"
+      -v "/etc/localtime:/etc/localtime:ro"
+      -v "kolla_logs:/var/log/kolla"
+      --ipc="private"
+      --env KOLLA_CONFIG_STRATEGY=COPY_ALWAYS
+      --privileged
+      --network host
+    container_state: running
+  include_role:
+    name: podman-container-systemd
+  when:
+    - inventory_hostname in groups[dict_item.value.group]
+    - dict_item.value.enabled | bool
+    - dict_item.key == "placement-api"
+  with_dict: "{{ placement_services }}"
+  loop_control:
+    loop_var: dict_item

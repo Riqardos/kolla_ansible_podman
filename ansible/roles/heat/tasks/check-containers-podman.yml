@@ -1,0 +1,72 @@
+---
+- name: Create heat-api container
+  vars:
+    container_image_list:
+      - "{{ dict_item.value.image }}"
+    container_name: "{{ dict_item.value.container_name }}"
+    container_run_args: >-
+      --label "io.containers.autoupdate=image"
+      -v "{{ node_config_directory }}/heat-api/:{{ container_config_directory }}/:ro"
+      -v "/etc/localtime:/etc/localtime:ro"
+      -v "kolla_logs:/var/log/kolla"
+      --env KOLLA_CONFIG_STRATEGY=COPY_ALWAYS
+      --privileged
+      --network host
+    container_state: running
+  include_role:
+    name: podman-container-systemd
+  when:
+    - inventory_hostname in groups[dict_item.value.group]
+    - dict_item.value.enabled | bool
+    - dict_item.key == "heat-api"
+  with_dict: "{{ heat_services }}"
+  loop_control:
+    loop_var: dict_item
+
+- name: Create heat-api-cfn container
+  vars:
+    container_image_list:
+      - "{{ dict_item.value.image }}"
+    container_name: "{{ dict_item.value.container_name }}"
+    container_run_args: >-
+      --label "io.containers.autoupdate=image"
+      -v "{{ node_config_directory }}/heat-api-cfn/:{{ container_config_directory }}/:ro"
+      -v "/etc/localtime:/etc/localtime:ro"
+      -v "kolla_logs:/var/log/kolla"
+      --env KOLLA_CONFIG_STRATEGY=COPY_ALWAYS
+      --privileged
+      --network host
+    container_state: running
+  include_role:
+    name: podman-container-systemd
+  when:
+    - inventory_hostname in groups[dict_item.value.group]
+    - dict_item.value.enabled | bool
+    - dict_item.key == "heat-api-cfn"
+  with_dict: "{{ heat_services }}"
+  loop_control:
+    loop_var: dict_item
+
+- name: Create heat-engine container
+  vars:
+    container_image_list:
+      - "{{ dict_item.value.image }}"
+    container_name: "{{ dict_item.value.container_name }}"
+    container_run_args: >-
+      --label "io.containers.autoupdate=image"
+      -v "{{ node_config_directory }}/heat-engine/:{{ container_config_directory }}/:ro"
+      -v "/etc/localtime:/etc/localtime:ro"
+      -v "kolla_logs:/var/log/kolla"
+      --env KOLLA_CONFIG_STRATEGY=COPY_ALWAYS
+      --privileged
+      --network host
+    container_state: running
+  include_role:
+    name: podman-container-systemd
+  when:
+    - inventory_hostname in groups[dict_item.value.group]
+    - dict_item.value.enabled | bool
+    - dict_item.key == "heat-engine"
+  with_dict: "{{ heat_services }}"
+  loop_control:
+    loop_var: dict_item

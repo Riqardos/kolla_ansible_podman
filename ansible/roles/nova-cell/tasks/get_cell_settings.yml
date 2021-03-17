@@ -18,6 +18,44 @@
   changed_when: false
   failed_when:
     - existing_cells_list.rc != 0
+  when: kolla_container_engine == 'docker'
+
+# PODMAN block
+- block:
+  - name: Create volume for copying script
+    become: true
+    containers.podman.podman_volume:
+      name: "nova-cell"
+
+
+  - name: Copy custom file 
+    ansible.builtin.copy:
+      src: script.sh
+      dest: /var/lib/containers/storage/volumes/nova-cell/_data/
+      mode: '0777'
+
+  - name: Get a list of existing cells
+    vars:
+      nova_conductor: "{{ nova_cell_services['nova-conductor'] }}"
+    become: true
+    containers.podman.podman_container:
+      command: bash -c /var/lib/script/script.sh
+      rm: yes
+      detach: False
+      image: "{{ nova_conductor.image }}"
+      labels:
+        BOOTSTRAP:
+      name: "nova_list_cells"
+      env:
+        KOLLA_CONFIG_STRATEGY: "{{ config_strategy }}"
+      volumes: "{{ nova_cell_bootstrap_default_volumes + nova_cell_bootstrap_extra_volumes }}"
+      network: host
+    register: existing_cells_list
+    changed_when: false
+    # TODO ceknut return
+    # failed_when:
+      # - existing_cells_list.rc != 0
+  when: kolla_container_engine == 'podman'
 
 - name: Extract current cell settings from list
   vars:

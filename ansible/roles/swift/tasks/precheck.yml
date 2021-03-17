@@ -14,6 +14,18 @@
       - swift_object_server
       - swift_proxy_server
   register: container_facts
+  when: kolla_container_engine == 'docker'
+
+- name: Get container facts
+  become: true
+  kolla_container_facts_podman:
+    name:
+      - swift_account_server
+      - swift_container_server
+      - swift_object_server
+      - swift_proxy_server
+  register: container_facts
+  when: kolla_container_engine == 'podman'
 
 - name: Checking free port for Swift Account Server
   wait_for:

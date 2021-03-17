@@ -1,0 +1,27 @@
+---
+# TODO(mgoddard): We could use nova-manage db sync --local_cell, otherwise we
+# sync cell0 twice. Should not be harmful without though.
+- name: Running Nova API bootstrap container
+  become: true
+  vars:
+    nova_api: "{{ nova_services['nova-api'] }}"
+  containers.podman.podman_container:
+    detach: No # was No but it never finishes because its waiting to register bootstrap_result
+    rm: yes
+    env:
+      KOLLA_UPGRADE:
+      KOLLA_CONFIG_STRATEGY: "{{ config_strategy }}"
+    image: "{{ nova_api.image }}"
+    labels:
+      BOOTSTRAP:
+    name: "nova_api_bootstrap"
+    network: "host"
+    volumes: "{{ nova_api_bootstrap_default_volumes + nova_api_bootstrap_extra_volumes }}"
+#    command:  bash -c /var/lib/kolla/config_files/bootstrap1.sh
+  register: bootstrap_result
+  changed_when: bootstrap_result.stdout | default("") | length > 0
+  run_once: true
+
+# - name: Example using fail 
+#   fail:
+#     msg: Remove task

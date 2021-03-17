@@ -12,6 +12,16 @@
       - haproxy
       - keepalived
   register: container_facts
+  when: kolla_container_engine == 'docker'
+
+- name: Get container facts
+  become: true
+  kolla_container_facts_podman:
+    name:
+      - haproxy
+      - keepalived
+  register: container_facts
+  when: kolla_container_engine == 'podman'
 
 - name: Group hosts by whether they are running keepalived
   group_by:

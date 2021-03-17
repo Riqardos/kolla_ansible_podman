@@ -12,6 +12,16 @@
       - skydive_analyzer
       - skydive_agent
   register: container_facts
+  when: kolla_container_engine == 'docker'
+
+- name: Get container facts
+  become: true
+  kolla_container_facts_podman:
+    name:
+      - skydive_analyzer
+      - skydive_agent
+  register: container_facts
+  when: kolla_container_engine == 'podman'
 
 - name: Checking free port for Skydive Analyzer
   vars:

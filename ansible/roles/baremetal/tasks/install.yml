@@ -39,7 +39,7 @@
 # running containers prior to a potential upgrade of Docker.
 
 - name: Check which containers are running
-  command: docker ps -f 'status=running' -q
+  command: "{{kolla_container_engine}} ps -f 'status=running' -q"
   become: true
   # If Docker is not installed this command may exit non-zero.
   failed_when: false
@@ -97,6 +97,35 @@
       command: "docker start {{ running_containers.stdout }}"
       become: true
   when:
+    - kolla_container_engine == 'docker'
+    - install_result is changed
+    - running_containers.rc == 0
+    - running_containers.stdout != ''
+  vars:
+    install_result: "{{ rpm_install_result if ansible_os_family == 'RedHat' else apt_install_result }}"
+
+- block:
+    # Installing podman an running podman
+
+    - name: Install podman
+      dnf:
+        name: podman
+        state: latest
+
+    - name: Wait for Podman to start
+      command: podman info
+      become: true
+      changed_when: false
+      register: result
+      until: result is success
+      retries: 6
+      delay: 10
+
+    - name: Ensure containers are running after Docker upgrade
+      command: "podman start {{ running_containers.stdout }}"
+      become: true
+  when:
+    - kolla_container_engine == 'podman'
     - install_result is changed
     - running_containers.rc == 0
     - running_containers.stdout != ''
@@ -113,6 +142,35 @@
   become: True
   when: virtualenv is not none
 
+- block:
+    # Installing podman-py from git-repo, and podman ansible modules
+
+    - name: Start podman.socket
+      service:
+        name: podman.socket
+        state: started
+      
+    - name: Clone podman-py
+      git:
+        repo: https://github.com/containers/podman-py.git
+        dest: ~/podman-py
+        clone: yes
+      
+    - name: Install podman-py
+      ansible.builtin.shell:
+        cmd: 'pip3 install ~/podman-py/'
+    
+    - name: Delete podman-py git clone
+      file:
+        state: absent
+        path: ~/podman-py/
+      
+    - name: Install podman_container module
+      ansible.builtin.shell:
+        cmd: 'ansible-galaxy collection install containers.podman'
+
+  when: kolla_container_engine == 'podman'
+
 - name: Install docker SDK for python
   pip:
     # NOTE(hrw) docker 2.4.2 is in kolla-ansible requirements
@@ -122,6 +180,7 @@
     virtualenv_site_packages: "{{ virtualenv is none | ternary(omit, virtualenv_site_packages) }}"
     virtualenv_python: "{{ virtualenv is none | ternary(omit, 'python' ~ host_python_version) }}"
   become: True
+  when: kolla_container_engine == 'docker'
 
 - name: Remove packages
   package:

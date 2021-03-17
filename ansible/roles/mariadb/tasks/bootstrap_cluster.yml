@@ -19,6 +19,29 @@
     name: "bootstrap_mariadb"
     restart_policy: no
     volumes: "{{ service.volumes }}"
+  when: kolla_container_engine == 'docker'
+  notify:
+    - Bootstrap MariaDB cluster
+
+- name: Running MariaDB bootstrap container podman
+  vars:
+    service_name: "mariadb"
+    service: "{{ mariadb_services[service_name] }}"
+  become: true
+  containers.podman.podman_container:
+    name: "bootstrap_mariadb"
+    detach: False
+    env:
+      KOLLA_BOOTSTRAP:
+      KOLLA_CONFIG_STRATEGY: "{{ config_strategy }}"
+      DB_ROOT_PASSWORD: "{{ database_password }}"
+      DB_MAX_TIMEOUT: "{{ database_max_timeout }}"
+    image: "{{ service.image }}"
+    labels:
+      BOOTSTRAP:
+    volumes: "{{ service.volumes }}"
+    rm: true
+  when: kolla_container_engine == 'podman'
   notify:
     - Bootstrap MariaDB cluster
 

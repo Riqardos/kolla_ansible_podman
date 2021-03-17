@@ -4,6 +4,10 @@
 - import_tasks: config.yml
 
 - import_tasks: check-containers.yml
+  when: kolla_container_engine == 'docker'
+  
+- import_tasks: check-containers-podman.yml
+  when: kolla_container_engine == 'podman'
 
 # NOTE(yoctozepto): haproxy role handlers should not be flushed early.
 # site.yml handles all haproxy things in a dedicated play.

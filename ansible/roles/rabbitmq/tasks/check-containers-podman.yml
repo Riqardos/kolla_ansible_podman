@@ -1,0 +1,51 @@
+---
+- name: Creating rabbitmw volume
+  become: true
+  containers.podman.podman_volume:
+    name: "{{ project_name }}"
+  register: rabbitmq_volume_podman
+  when:
+    - kolla_container_engine == 'podman'
+  
+
+
+- name: Create rabbitmq service
+  vars:
+    container_image_list: 
+      - "{{ rabbitmq_services.rabbitmq.image }}"
+    container_name: "{{ rabbitmq_services.rabbitmq.container_name }}"
+    container_run_args: >-
+      --label "io.containers.autoupdate=image"
+      -v "{{ node_config_directory }}/{{ project_name }}/:{{ container_config_directory }}/:ro"
+      -v "/etc/localtime:/etc/localtime:ro"
+      -v "kolla_logs:/var/log/kolla"
+      -v "{{ project_name }}:/var/lib/rabbitmq/"
+      --env KOLLA_CONFIG_STRATEGY=COPY_ALWAYS
+      --env RABBITMQ_CLUSTER_COOKIE={{ role_rabbitmq_cluster_cookie }}
+      --env RABBITMQ_LOG_DIR=/var/log/kolla/{{ project_name }}
+      --privileged
+      --network host
+    container_state: running
+  include_role:
+    name: podman-container-systemd
+  when:
+    - inventory_hostname in groups[rabbitmq_services.rabbitmq.group]
+    - rabbitmq_services.rabbitmq.enabled | bool
+
+- name: Remove erlang.cookie file
+  become: true
+  file:
+    path: /var/lib/containers/storage/volumes/rabbitmq/_data/.erlang.cookie"
+    state: absent
+
+- name: Copy erlang.cookie
+  become: true
+  copy:
+    content: "{{ rabbitmq_cluster_cookie }}"
+    dest: "/var/lib/containers/storage/volumes/rabbitmq/_data/.erlang.cookie"
+    mode: "0400"
+
+- name: Restart service
+  ansible.builtin.systemd:
+    name: rabbitmq-container-pod-root
+    state: restarted

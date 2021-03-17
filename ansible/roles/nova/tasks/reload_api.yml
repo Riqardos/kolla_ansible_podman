@@ -21,3 +21,24 @@
   with_items:
     - nova-scheduler
     - nova-api
+  when: kolla_container_engine == 'docker'
+
+- name: Reload nova API services to remove RPC version pin
+  vars:
+    service: "{{ nova_services[item] }}"
+  become: true
+  containers.podman.podman_container:
+    name: "{{ service.container_name }}"
+    image: "{{ service.image }}"
+    privileged: "{{ service.privileged | default(False) }}"
+    volumes: "{{ service.volumes|reject('equalto', '')|list }}"
+  when:
+    - kolla_action == 'upgrade'
+    - inventory_hostname in groups[service.group]
+    - service.enabled | bool
+  with_items:
+    - nova-scheduler
+    - nova-api
+  when: kolla_container_engine == 'podman'
+
+

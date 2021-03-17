@@ -1,0 +1,287 @@
+---
+# - name: Check keystone containers
+#   become: true
+#   containers.podman.podman_container:
+#     name: "{{ item.value.container_name }}"
+#     image: "{{ item.value.image }}"
+#     volumes: "{{ item.value.volumes|reject('equalto', '')|list }}"
+#     healthcheck: "{{ item.value.healthcheck | default(omit) }}"
+#     network: "host"
+#     env:
+#       KOLLA_CONFIG_STRATEGY: "{{ config_strategy }}"
+#   when:
+#     - inventory_hostname in groups[item.value.group]
+#     - item.value.enabled | bool
+#   with_dict: "{{ keystone_services }}"
+
+
+# - name: Check nova-cell containers
+#   become: true
+#   kolla_docker:
+#     action: "compare_container"
+#     common_options: "{{ docker_common_options }}"
+#     name: "{{ item.value.container_name }}"
+#     image: "{{ item.value.image }}"
+#     environment: "{{ item.value.environment|default(omit) }}"
+#     pid_mode: "{{ item.value.pid_mode|default('') }}"
+#     ipc_mode: "{{ item.value.ipc_mode|default(omit) }}"
+#     privileged: "{{ item.value.privileged|default(False) }}"
+#     volumes: "{{ item.value.volumes|reject('equalto', '')|list }}"
+#     dimensions: "{{ item.value.dimensions }}"
+#     healthcheck: "{{ item.value.healthcheck | default(omit) }}"
+#   when:
+#     - inventory_hostname in groups[item.value.group]
+#     - item.value.enabled | bool
+#   with_dict: "{{ nova_cell_services }}"
+#   notify:
+#     - "Restart {{ item.key }} container"
+
+- name: Create nova-libvirt service
+  vars:
+    container_image_list: 
+      - "{{ dict_item.value.image }}"
+    container_name: "{{ dict_item.value.container_name }}"
+    container_run_args: >-
+      --label "io.containers.autoupdate=image"
+      -v "{{ node_config_directory }}/nova-libvirt/:{{ container_config_directory }}/:ro"
+      -v "/etc/localtime:/etc/localtime:ro"
+      -v "/lib/modules:/lib/modules:ro"
+      -v "/dev:/dev"
+      -v "/sys/fs/cgroup:/sys/fs/cgroup"
+      -v "kolla_logs:/var/log/kolla/"
+      -v "libvirtd:/var/lib/libvirt"
+      -v "{{ nova_instance_datadir_volume }}:/var/lib/nova/"
+      -v "nova_libvirt_qemu:/etc/libvirt/qemu"
+      --env KOLLA_CONFIG_STRATEGY=COPY_ALWAYS
+      --privileged
+      --network host
+    #  -v "/run/:/run/:shared"
+    # --health-interval={{ nova_libvirt_healthcheck_interval }}
+    # --health-retries={{ nova_libvirt_healthcheck_retries }}
+    # --health-start-period={{ nova_libvirt_healthcheck_start_period }}
+    # --health-timeout={{ nova_libvirt_healthcheck_timeout }}
+    container_state: running
+  include_role:
+    name: podman-container-systemd
+  when:
+    - inventory_hostname in groups[dict_item.value.group]
+    - dict_item.value.enabled | bool
+    - dict_item.key == "nova-libvirt"
+  with_dict: "{{ nova_cell_services }}"
+  loop_control:
+    loop_var: dict_item
+
+- name: Create nova-ssh service
+  vars:
+    container_image_list: 
+      - "{{ dict_item.value.image }}"
+    container_name: "{{ dict_item.value.container_name }}"
+    container_run_args: >-
+      --label "io.containers.autoupdate=image"
+      -v "{{ node_config_directory }}/nova-ssh/:{{ container_config_directory }}/:ro"
+      -v "/etc/localtime:/etc/localtime:ro"
+      -v "kolla_logs:/var/log/kolla"
+      -v "{{ nova_instance_datadir_volume }}:/var/lib/nova"
+      --env KOLLA_CONFIG_STRATEGY=COPY_ALWAYS
+      --privileged
+      --network host 
+    # -v "{% if enable_shared_var_lib_nova_mnt | bool %}/var/lib/nova/mnt:/var/lib/nova/mnt:shared{% endif %}"
+    # -v "{{ kolla_dev_repos_directory ~ '/nova/nova:/var/lib/kolla/venv/lib/python' ~ distro_python_version ~ '/site-packages/nova' if nova_dev_mode | bool else '' }}"
+    # "{% if nova_ssh_enable_healthchecks | bool %}--health-cmd {{ nova_ssh_healthcheck_test }}{% else %}NONE{% endif %}"
+    # --health-interval={{ nova_ssh_healthcheck_interval }}
+    # --health-retries={{ nova_ssh_healthcheck_retries }}
+    # --health-start-period={{ nova_ssh_healthcheck_start_period }}
+    # --health-timeout={{ nova_ssh_healthcheck_timeout }}
+    container_state: running
+  include_role:
+    name: podman-container-systemd
+  when:
+    - inventory_hostname in groups[dict_item.value.group]
+    - dict_item.value.enabled | bool
+    - dict_item.key == "nova-ssh"
+  with_dict: "{{ nova_cell_services }}"
+  loop_control:
+    loop_var: dict_item
+
+- name: Create nova-novncproxy service
+  vars:
+    container_image_list: 
+      - "{{ dict_item.value.image }}"
+    container_name: "{{ dict_item.value.container_name }}"
+    container_run_args: >-
+      --label "io.containers.autoupdate=image"
+      -v "{{ node_config_directory }}/nova-novncproxy/:{{ container_config_directory }}/:ro"
+      -v "/etc/localtime:/etc/localtime:ro"
+      -v "kolla_logs:/var/log/kolla/"
+      --env KOLLA_CONFIG_STRATEGY=COPY_ALWAYS
+      --privileged
+      --network host
+    # -v "{{ kolla_dev_repos_directory ~ '/nova/nova:/var/lib/kolla/venv/lib/python' ~ distro_python_version ~ '/site-packages/nova' if nova_dev_mode | bool else '' }}"
+    # "{% if nova_novncproxy_enable_healthchecks | bool %}--health-cmd {{ nova_novncproxy_healthcheck_test }}{% else %}NONE{% endif %}"
+    # --health-interval={{ nova_novncproxy_healthcheck_interval }}
+    # --health-retries={{ nova_novncproxy_healthcheck_retries }}
+    # --health-start-period={{ nova_novncproxy_healthcheck_start_period }}
+    # --health-timeout={{ nova_novncproxy_healthcheck_timeout }}
+    container_state: running
+  include_role:
+    name: podman-container-systemd
+  when:
+    - inventory_hostname in groups[dict_item.value.group]
+    - dict_item.value.enabled | bool
+    - dict_item.key == "nova-novncproxy"
+  with_dict: "{{ nova_cell_services }}"
+  loop_control:
+    loop_var: dict_item
+
+- name: Create nova-spicehtml5proxy service
+  vars:
+    container_image_list: 
+      - "{{ dict_item.value.image }}"
+    container_name: "{{ dict_item.value.container_name }}"
+    container_run_args: >-
+      --label "io.containers.autoupdate=image"
+      -v "{{ node_config_directory }}/nova-spicehtml5proxy/:{{ container_config_directory }}/:ro"
+      -v "/etc/localtime:/etc/localtime:ro"
+      -v "kolla_logs:/var/log/kolla/"
+      --env KOLLA_CONFIG_STRATEGY=COPY_ALWAYS
+      --privileged
+      --network host
+    # -v "{{ kolla_dev_repos_directory ~ '/nova/nova:/var/lib/kolla/venv/lib/python' ~ distro_python_version ~ '/site-packages/nova' if nova_dev_mode | bool else '' }}"
+    container_state: running
+  include_role:
+    name: podman-container-systemd
+  when:
+    - inventory_hostname in groups[dict_item.value.group]
+    - dict_item.value.enabled | bool
+    - dict_item.key == "nova-spicehtml5proxy"
+  with_dict: "{{ nova_cell_services }}"
+  loop_control:
+    loop_var: dict_item
+
+- name: Create nova-serialproxy service
+  vars:
+    container_image_list: 
+      - "{{ dict_item.value.image }}"
+    container_name: "{{ dict_item.value.container_name }}"
+    container_run_args: >-
+      --label "io.containers.autoupdate=image"
+      -v "{{ node_config_directory }}/nova-serialproxy/:{{ container_config_directory }}/:ro"
+      -v "/etc/localtime:/etc/localtime:ro"
+      -v "kolla_logs:/var/log/kolla/"
+      --env KOLLA_CONFIG_STRATEGY=COPY_ALWAYS
+      --privileged
+      --network host
+    # -v "{{ kolla_dev_repos_directory ~ '/nova/nova:/var/lib/kolla/venv/lib/python' ~ distro_python_version ~ '/site-packages/nova' if nova_dev_mode | bool else '' }}"
+    container_state: running
+  include_role:
+    name: podman-container-systemd
+  when:
+    - inventory_hostname in groups[dict_item.value.group]
+    - dict_item.value.enabled | bool
+    - dict_item.key == "nova-serialproxy"
+  with_dict: "{{ nova_cell_services }}"
+  loop_control:
+    loop_var: dict_item
+
+- name: Create nova-conductor service
+  vars:
+    container_image_list: 
+      - "{{ dict_item.value.image }}"
+    container_name: "{{ dict_item.value.container_name }}"
+    container_run_args: >-
+      --label "io.containers.autoupdate=image"
+      -v "{{ node_config_directory }}/nova-conductor/:{{ container_config_directory }}/:ro"
+      -v "/etc/localtime:/etc/localtime:ro"
+      -v "kolla_logs:/var/log/kolla/"
+      --env KOLLA_CONFIG_STRATEGY=COPY_ALWAYS
+      --privileged
+      --network host
+    # -v "{{ kolla_dev_repos_directory ~ '/nova/nova:/var/lib/kolla/venv/lib/python' ~ distro_python_version ~ '/site-packages/nova' if nova_dev_mode | bool else '' }}"
+    # "{% if nova_conductor_enable_healthchecks | bool %}--health-cmd {{ nova_conductor_healthcheck_test }}{% else %}NONE{% endif %}"
+    # --health-interval={{ nova_conductor_healthcheck_interval }}
+    # --health-retries={{ nova_conductor_healthcheck_retries }}
+    # --health-start-period={{ nova_conductor_healthcheck_start_period }}
+    # --health-timeout={{ nova_conductor_healthcheck_timeout }}
+    container_state: running
+  include_role:
+    name: podman-container-systemd
+  when:
+    - inventory_hostname in groups[dict_item.value.group]
+    - dict_item.value.enabled | bool
+    - dict_item.key == "nova-conductor"
+  with_dict: "{{ nova_cell_services }}"
+  loop_control:
+    loop_var: dict_item
+
+- name: Create nova-compute service
+  vars:
+    container_image_list: 
+      - "{{ dict_item.value.image }}"
+    container_name: "{{ dict_item.value.container_name }}"
+    container_run_args: >-
+      --label "io.containers.autoupdate=image"
+      -v "{{ node_config_directory }}/nova-compute/:{{ container_config_directory }}/:ro"
+      -v "/etc/localtime:/etc/localtime:ro"
+      -v "/lib/modules:/lib/modules:ro"
+      -v "/dev:/dev"
+      -v "kolla_logs:/var/log/kolla/"
+      -v "libvirtd:/var/lib/libvirt"
+      -v "{{ nova_instance_datadir_volume }}:/var/lib/nova/"
+      --env KOLLA_CONFIG_STRATEGY=COPY_ALWAYS
+      --env LIBGUESTFS_BACKEND=direct
+      --privileged
+      --network host
+    # -v "/run:/run:shared"
+    # -v "{% if enable_iscsid | bool %}iscsi_info:/etc/iscsi{% endif %}"
+    # -v "{% if enable_shared_var_lib_nova_mnt | bool %}/var/lib/nova/mnt:/var/lib/nova/mnt:shared{% endif %}"
+    # -v "{{ kolla_dev_repos_directory ~ '/nova/nova:/var/lib/kolla/venv/lib/python' ~ distro_python_version ~ '/site-packages/nova' if nova_dev_mode | bool else '' }}"
+    # "{% if nova_compute_enable_healthchecks | bool %}--health-cmd {{ nova_compute_healthcheck_test }}{% else %}NONE{% endif %}"
+    # --health-interval={{ nova_compute_healthcheck_interval }}
+    # --health-retries={{ nova_compute_healthcheck_retries }}
+    # --health-start-period={{ nova_compute_healthcheck_start_period }}
+    # --health-timeout={{ nova_compute_healthcheck_timeout }}
+    container_state: running
+  include_role:
+    name: podman-container-systemd
+  when:
+    - inventory_hostname in groups[dict_item.value.group]
+    - dict_item.value.enabled | bool
+    - dict_item.key == "nova-compute"
+  with_dict: "{{ nova_cell_services }}"
+  loop_control:
+    loop_var: dict_item
+
+
+- name: Create nova-compute-ironic service
+  vars:
+    container_image_list: 
+      - "{{ dict_item.value.image }}"
+    container_name: "{{ dict_item.value.container_name }}"
+    container_run_args: >-
+      --label "io.containers.autoupdate=image"
+      -v "{{ node_config_directory }}/nova-compute-ironic/:{{ container_config_directory }}/:ro"
+      -v "/etc/localtime:/etc/localtime:ro"
+      -v "kolla_logs:/var/log/kolla/"
+      --env KOLLA_CONFIG_STRATEGY=COPY_ALWAYS
+      --privileged
+      --network host
+    # -v "{{ kolla_dev_repos_directory ~ '/nova/nova:/var/lib/kolla/venv/lib/python' ~ distro_python_version ~ '/site-packages/nova' if nova_dev_mode | bool else '' }}"
+    # "{% if nova_compute_ironic_enable_healthchecks | bool %}--health-cmd {{ nova_compute_ironic_healthcheck_test }}{% else %}NONE{% endif %}"
+    # --health-interval={{ nova_compute_ironic_healthcheck_interval }}
+    # --health-retries={{ nova_compute_ironic_healthcheck_retries }}
+    # --health-start-period={{ nova_compute_ironic_healthcheck_start_period }}
+    # --health-timeout={{ nova_compute_ironic_healthcheck_timeout }}
+    container_state: running
+  include_role:
+    name: podman-container-systemd
+  when:
+    - inventory_hostname in groups[dict_item.value.group]
+    - dict_item.value.enabled | bool
+    - dict_item.key == "nova-compute-ironic"
+  with_dict: "{{ nova_cell_services }}"
+  loop_control:
+    loop_var: dict_item
+
+
+
+

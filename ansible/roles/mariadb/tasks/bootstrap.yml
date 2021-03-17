@@ -7,4 +7,12 @@
     - inventory_hostname == groups['mariadb'][0]
 
 - include_tasks: recover_cluster.yml
-  when: mariadb_recover | default(False)
+  when: 
+    - kolla_container_engine == 'docker'
+    - mariadb_recover | default(False)
+    
+
+- include_tasks: recover_cluster_podman.yml
+  when:
+    - kolla_container_engine == 'podman'
+    - mariadb_recover | default(False)

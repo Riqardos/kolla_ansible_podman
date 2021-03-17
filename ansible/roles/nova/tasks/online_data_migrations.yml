@@ -18,3 +18,23 @@
     volumes: "{{ nova_api_bootstrap_default_volumes + nova_api_bootstrap_extra_volumes }}"
   run_once: true
   delegate_to: "{{ groups[nova_api.group][0] }}"
+  when: kolla_container_engine == 'docker'
+
+
+- name: Run Nova API online database migrations
+  vars:
+    nova_api: "{{ nova_services['nova-api'] }}"
+  become: true
+  containers.podman.podman_container:
+    detach: False
+    env:
+      KOLLA_OSM:
+      KOLLA_CONFIG_STRATEGY: "{{ config_strategy }}"
+    image: "{{ nova_api.image }}"
+    labels:
+      BOOTSTRAP:
+    name: "nova_api_online_data_migrations"
+    volumes: "{{ nova_api_bootstrap_default_volumes + nova_api_bootstrap_extra_volumes }}"
+  run_once: true
+  delegate_to: "{{ groups[nova_api.group][0] }}"
+  when: kolla_container_engine == 'podman'

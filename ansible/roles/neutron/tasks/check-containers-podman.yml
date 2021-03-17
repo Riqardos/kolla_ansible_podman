@@ -1,0 +1,409 @@
+---
+# - name: Check neutron containers
+#   become: true
+#   containers.podman.podman_container:
+#     name: "{{ item.value.container_name }}"
+#     image: "{{ item.value.image }}"
+#     privileged: "{{ item.value.privileged | default(False) }}"
+#     volumes: "{{ item.value.volumes }}"
+#     environment: "{{ item.value.environment | default(omit) }}"
+#     healthcheck: "{{ item.value.healthcheck | default(omit) }}"
+#   when:
+#     - item.value.enabled | bool
+#     - item.value.value.host_in_groups | bool
+#   with_dict: "{{ neutron_services }}"
+#   notify:
+#     - "Restart {{ item.key }} container"
+
+- name: Create neutron-server service
+  vars:
+    container_image_list: 
+      - "{{ dict_item.value.image }}"
+    container_name: "{{ dict_item.value.container_name }}"
+    container_run_args: >-
+      --label "io.containers.autoupdate=image"
+      -v "{{ node_config_directory }}/neutron-server/:{{ container_config_directory }}/:ro"
+      -v "/etc/localtime:/etc/localtime:ro"
+      -v "kolla_logs:/var/log/kolla"
+      --env KOLLA_CONFIG_STRATEGY=COPY_ALWAYS
+      --privileged
+      --network host
+    # missing healthchecks
+    container_state: running
+  include_role:
+    name: podman-container-systemd
+  when:
+    - dict_item.key == "neutron-server"
+    - dict_item.value.host_in_groups | bool
+    - dict_item.value.enabled | bool
+  with_dict: "{{ neutron_services }}"
+  loop_control:
+    loop_var: dict_item
+
+- name: Create neutron-openvswitch-agent service
+  vars:
+    container_image_list: 
+      - "{{ dict_item.value.image }}"
+    container_name: "{{ dict_item.value.container_name }}"
+    container_run_args: >-
+      --label "io.containers.autoupdate=image"
+      -v "{{ node_config_directory }}/neutron-openvswitch-agent/:{{ container_config_directory }}/:ro"
+      -v "/etc/localtime:/etc/localtime:ro"
+      -v "/lib/modules:/lib/modules:ro"
+      -v "kolla_logs:/var/log/kolla"
+      --env KOLLA_CONFIG_STRATEGY=COPY_ALWAYS
+      --env KOLLA_LEGACY_IPTABLES="{{ neutron_legacy_iptables | bool | lower }}"
+      --privileged
+      --network host
+    # -v "/run/openvswitch:/run/openvswitch:shared"
+  #missing healthchecks 
+    container_state: running
+  include_role:
+    name: podman-container-systemd
+  when:
+    - dict_item.value.host_in_groups | bool
+    - dict_item.value.enabled | bool
+    - dict_item.key == "neutron-openvswitch-agent"
+  with_dict: "{{ neutron_services }}"
+  loop_control:
+    loop_var: dict_item
+
+- name: Create neutron-linuxbridge-agent service
+  vars:
+    container_image_list: 
+      - "{{ dict_item.value.image }}"
+    container_name: "{{ dict_item.value.container_name }}"
+    container_run_args: >-
+      --label "io.containers.autoupdate=image"
+      -v "{{ node_config_directory }}/neutron-linuxbridge-agent/:{{ container_config_directory }}/:ro"
+      -v "/etc/localtime:/etc/localtime:ro"
+      -v "/lib/modules:/lib/modules:ro"
+      -v "kolla_logs:/var/log/kolla"
+      --env KOLLA_CONFIG_STRATEGY=COPY_ALWAYS
+      --env KOLLA_LEGACY_IPTABLES="{{ neutron_legacy_iptables | bool | lower }}"
+      --privileged
+      --network host
+    # -v "/run/openvswitch:/run/openvswitch:shared"
+  #missing healthchecks
+    container_state: running
+  include_role:
+    name: podman-container-systemd
+  when:
+    - dict_item.value.host_in_groups | bool
+    - dict_item.value.enabled | bool
+    - dict_item.key == "neutron-linuxbridge-agent"
+  with_dict: "{{ neutron_services }}"
+  loop_control:
+    loop_var: dict_item
+
+- name: Create neutron-dhcp-agent service
+  vars:
+    container_image_list: 
+      - "{{ dict_item.value.image }}"
+    container_name: "{{ dict_item.value.container_name }}"
+    container_run_args: >-
+      --label "io.containers.autoupdate=image"
+      -v "{{ node_config_directory }}/neutron-dhcp-agent/:{{ container_config_directory }}/:ro"
+      -v "/etc/localtime:/etc/localtime:ro"
+      -v "neutron_metadata_socket:/var/lib/neutron/kolla/"
+      -v "kolla_logs:/var/log/kolla"
+      --env KOLLA_CONFIG_STRATEGY=COPY_ALWAYS
+      --privileged
+      --network host
+    # -v "/run/netns:/run/netns:shared"
+
+    # missing healthchecks
+    container_state: running
+  include_role:
+    name: podman-container-systemd
+  when:
+    - dict_item.value.host_in_groups | bool
+    - dict_item.value.enabled | bool
+    - dict_item.key == "neutron-dhcp-agent"
+  with_dict: "{{ neutron_services }}"
+  loop_control:
+    loop_var: dict_item
+
+- name: Create neutron-l3-agent service
+  vars:
+    container_image_list: 
+      - "{{ dict_item.value.image }}"
+    container_name: "{{ dict_item.value.container_name }}"
+    container_run_args: >-
+      --label "io.containers.autoupdate=image"
+      -v "{{ node_config_directory }}/neutron-l3-agent/:{{ container_config_directory }}/:ro"
+      -v "/etc/localtime:/etc/localtime:ro"
+      -v "/lib/modules:/lib/modules:ro"
+      -v "neutron_metadata_socket:/var/lib/neutron/kolla/"
+      -v "kolla_logs:/var/log/kolla"
+      --env KOLLA_CONFIG_STRATEGY=COPY_ALWAYS
+      --env KOLLA_LEGACY_IPTABLES="{{ neutron_legacy_iptables | bool | lower }}"
+      --privileged
+      --network host
+    # -v "/run/netns:/run/netns:shared"
+    # missing healthchecks
+    container_state: running
+  include_role:
+    name: podman-container-systemd
+  when:
+    - dict_item.value.host_in_groups | bool
+    - dict_item.value.enabled | bool
+    - dict_item.key == "neutron-l3-agent"
+  with_dict: "{{ neutron_services }}"
+  loop_control:
+    loop_var: dict_item
+
+- name: Create neutron-sriov-agent service
+  vars:
+    container_image_list: 
+      - "{{ dict_item.value.image }}"
+    container_name: "{{ dict_item.value.container_name }}"
+    container_run_args: >-
+      --label "io.containers.autoupdate=image"
+      -v "{{ node_config_directory }}/neutron-sriov-agent/:{{ container_config_directory }}/:ro"
+      -v "/etc/localtime:/etc/localtime:ro"
+      -v "kolla_logs:/var/log/kolla"
+      --env KOLLA_CONFIG_STRATEGY=COPY_ALWAYS
+      --privileged
+      --network host
+    # missing healthchecks
+    container_state: running
+  include_role:
+    name: podman-container-systemd
+  when:
+    - dict_item.value.host_in_groups | bool
+    - dict_item.value.enabled | bool
+    - dict_item.key == "neutron-sriov-agent"
+  with_dict: "{{ neutron_services }}"
+  loop_control:
+    loop_var: dict_item
+
+- name: Create neutron-mlnx-agent service
+  vars:
+    container_image_list: 
+      - "{{ dict_item.value.image }}"
+    container_name: "{{ dict_item.value.container_name }}"
+    container_run_args: >-
+      --label "io.containers.autoupdate=image"
+      -v "{{ node_config_directory }}/neutron-mlnx-agent/:{{ container_config_directory }}/:ro"
+      -v "/etc/localtime:/etc/localtime:ro"
+      -v "kolla_logs:/var/log/kolla"
+      --env KOLLA_CONFIG_STRATEGY=COPY_ALWAYS
+      --privileged
+      --network host
+    # missing healthchecks
+    container_state: running
+  include_role:
+    name: podman-container-systemd
+  when:
+    - dict_item.value.host_in_groups | bool
+    - dict_item.value.enabled | bool
+    - dict_item.key == "neutron-mlnx-agent"
+  with_dict: "{{ neutron_services }}"
+  loop_control:
+    loop_var: dict_item
+
+- name: Create neutron-eswitchd service
+  vars:
+    container_image_list: 
+      - "{{ dict_item.value.image }}"
+    container_name: "{{ dict_item.value.container_name }}"
+    container_run_args: >-
+      --label "io.containers.autoupdate=image"
+      -v "{{ node_config_directory }}/neutron-eswitchd/:{{ container_config_directory }}/:ro"
+      -v "/etc/localtime:/etc/localtime:ro"
+      -v "kolla_logs:/var/log/kolla"
+      --env KOLLA_CONFIG_STRATEGY=COPY_ALWAYS
+      --privileged
+      --network host
+    # -v "/run/libvirt:/run/libvirt:ro"
+    # missing healthchecks
+    container_state: running
+  include_role:
+    name: podman-container-systemd
+  when:
+    - dict_item.value.host_in_groups | bool
+    - dict_item.value.enabled | bool
+    - dict_item.key == "neutron-eswitchd"
+  with_dict: "{{ neutron_services }}"
+  loop_control:
+    loop_var: dict_item
+
+- name: Create neutron-metadata-agent service
+  vars:
+    container_image_list: 
+      - "{{ dict_item.value.image }}"
+    container_name: "{{ dict_item.value.container_name }}"
+    container_run_args: >-
+      --label "io.containers.autoupdate=image"
+      -v "{{ node_config_directory }}/neutron-metadata-agent/:{{ container_config_directory }}/:ro"
+      -v "/etc/localtime:/etc/localtime:ro"
+      -v "neutron_metadata_socket:/var/lib/neutron/kolla/"
+      -v "kolla_logs:/var/log/kolla"
+      --env KOLLA_CONFIG_STRATEGY=COPY_ALWAYS
+      --privileged
+      --network host
+    # missing healthchecks
+    container_state: running
+  include_role:
+    name: podman-container-systemd
+  when:
+    - dict_item.value.host_in_groups | bool
+    - dict_item.value.enabled | bool
+    - dict_item.key == "neutron-metadata-agent"
+  with_dict: "{{ neutron_services }}"
+  loop_control:
+    loop_var: dict_item
+
+- name: Create neutron-ovn-metadata-agent service
+  vars:
+    container_image_list: 
+      - "{{ dict_item.value.image }}"
+    container_name: "{{ dict_item.value.container_name }}"
+    container_run_args: >-
+      --label "io.containers.autoupdate=image"
+      -v "{{ node_config_directory }}/neutron-ovn-metadata-agent/:{{ container_config_directory }}/:ro"
+      -v "/etc/localtime:/etc/localtime:ro"
+      -v "neutron_metadata_socket:/var/lib/neutron/kolla/"
+      -v "kolla_logs:/var/log/kolla"
+      --env KOLLA_CONFIG_STRATEGY=COPY_ALWAYS
+      --privileged
+      --network host
+    # -v "/run/openvswitch:/run/openvswitch:shared"
+    # -v "/run/netns:/run/netns:shared"
+    # missing healthchecks
+    container_state: running
+  include_role:
+    name: podman-container-systemd
+  when:
+    - dict_item.value.host_in_groups | bool
+    - dict_item.value.enabled | bool
+    - dict_item.key == "neutron-ovn-metadata-agent"
+  with_dict: "{{ neutron_services }}"
+  loop_control:
+    loop_var: dict_item
+
+- name: Create neutron-bgp-dragent service
+  vars:
+    container_image_list: 
+      - "{{ dict_item.value.image }}"
+    container_name: "{{ dict_item.value.container_name }}"
+    container_run_args: >-
+      --label "io.containers.autoupdate=image"
+      -v "{{ node_config_directory }}/neutron-bgp-dragent/:{{ container_config_directory }}/:ro"
+      -v "/etc/localtime:/etc/localtime:ro"
+      -v "kolla_logs:/var/log/kolla"
+      --env KOLLA_CONFIG_STRATEGY=COPY_ALWAYS
+      --privileged
+      --network host
+    # missing healthchecks
+    container_state: running
+  include_role:
+    name: podman-container-systemd
+  when:
+    - dict_item.value.host_in_groups | bool
+    - dict_item.value.enabled | bool
+    - dict_item.key == "neutron-bgp-dragent"
+  with_dict: "{{ neutron_services }}"
+  loop_control:
+    loop_var: dict_item
+
+- name: Create neutron-infoblox-ipam-agent service
+  vars:
+    container_image_list: 
+      - "{{ dict_item.value.image }}"
+    container_name: "{{ dict_item.value.container_name }}"
+    container_run_args: >-
+      --label "io.containers.autoupdate=image"
+      -v "{{ node_config_directory }}/neutron-infoblox-ipam-agent/:{{ container_config_directory }}/:ro"
+      -v "/etc/localtime:/etc/localtime:ro"
+      -v "kolla_logs:/var/log/kolla"
+      --env KOLLA_CONFIG_STRATEGY=COPY_ALWAYS
+      --privileged
+      --network host
+    # missing healthchecks
+    container_state: running
+  include_role:
+    name: podman-container-systemd
+  when:
+    - dict_item.value.host_in_groups | bool
+    - dict_item.value.enabled | bool
+    - dict_item.key == "neutron-infoblox-ipam-agent"
+  with_dict: "{{ neutron_services }}"
+  loop_control:
+    loop_var: dict_item
+
+- name: Create neutron-metering-agent service
+  vars:
+    container_image_list: 
+      - "{{ dict_item.value.image }}"
+    container_name: "{{ dict_item.value.container_name }}"
+    container_run_args: >-
+      --label "io.containers.autoupdate=image"
+      -v "{{ node_config_directory }}/neutron-metering-agent/:{{ container_config_directory }}/:ro"
+      -v "/etc/localtime:/etc/localtime:ro"
+      -v "kolla_logs:/var/log/kolla"
+      --env KOLLA_CONFIG_STRATEGY=COPY_ALWAYS
+      --privileged
+      --network host
+    # missing healthchecks
+    container_state: running
+  include_role:
+    name: podman-container-systemd
+  when:
+    - dict_item.value.host_in_groups | bool
+    - dict_item.value.enabled | bool
+    - dict_item.key == "neutron-metering-agent"
+  with_dict: "{{ neutron_services }}"
+  loop_control:
+    loop_var: dict_item
+
+- name: Create ironic-neutron-agent service
+  vars:
+    container_image_list: 
+      - "{{ dict_item.value.image }}"
+    container_name: "{{ dict_item.value.container_name }}"
+    container_run_args: >-
+      --label "io.containers.autoupdate=image"
+      -v "{{ node_config_directory }}/ironic-neutron-agent/:{{ container_config_directory }}/:ro"
+      -v "/etc/localtime:/etc/localtime:ro"
+      -v "kolla_logs:/var/log/kolla"
+      --env KOLLA_CONFIG_STRATEGY=COPY_ALWAYS
+      --privileged
+      --network host
+    # missing healthchecks
+    container_state: running
+  include_role:
+    name: podman-container-systemd
+  when:
+    - dict_item.value.host_in_groups | bool
+    - dict_item.value.enabled | bool
+    - dict_item.key == "ironic-neutron-agent"
+  with_dict: "{{ neutron_services }}"
+  loop_control:
+    loop_var: dict_item
+
+- name: Create neutron-tls-proxy service
+  vars:
+    container_image_list: 
+      - "{{ dict_item.value.image }}"
+    container_name: "{{ dict_item.value.container_name }}"
+    container_run_args: >-
+      --label "io.containers.autoupdate=image"
+      -v "{{ node_config_directory }}/neutron-tls-proxy/:{{ container_config_directory }}/:ro"
+      -v "/etc/localtime:/etc/localtime:ro"
+      -v "kolla_logs:/var/log/kolla"
+      --env KOLLA_CONFIG_STRATEGY=COPY_ALWAYS
+      --privileged
+      --network host
+    # missing healthchecks
+    container_state: running
+  include_role:
+    name: podman-container-systemd
+  when:
+    - dict_item.value.host_in_groups | bool
+    - dict_item.value.enabled | bool
+    - dict_item.key == "neutron-tls-proxy"
+  with_dict: "{{ neutron_services }}"
+  loop_control:
+    loop_var: dict_item

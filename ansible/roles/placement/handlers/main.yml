@@ -14,3 +14,23 @@
     healthcheck: "{{ service.healthcheck | default(omit) }}"
   when:
     - kolla_action != "config"
+    - kolla_container_engine == 'docker'
+
+
+# Podman handler
+- name: Restart placement-api container
+  become: true
+  vars:
+    service_name: "placement-api"
+    service: "{{ placement_services[service_name] }}"
+  containers.podman.podman_container:
+    state: started
+    restart: yes
+    network: "host"
+    name: "{{ service.container_name }}"
+    image: "{{ service.image }}"
+    volumes: "{{ service.volumes|reject('equalto', '')|list }}"
+    healthcheck: "{{ service.healthcheck | default(omit) }}"
+  when:
+    - kolla_action != "config"
+    - kolla_container_engine == 'podman'

@@ -1,0 +1,72 @@
+---
+# - name: Check glance containers
+#   become: true
+#   containers.podman.podman_container:
+#     name: "{{ item.value.container_name }}"
+#     image: "{{ item.value.image }}"
+#     privileged: "{{ item.value.privileged | default(omit) }}"
+#     environment: 
+#       "{{ item.value.environment | default(omit) }}"
+#       KOLLA_CONFIG_STRATEGY: "{{ config_strategy }}"
+#     volumes: "{{ item.value.volumes|reject('equalto', '')|list }}"
+#     healthcheck: "{{ item.value.healthcheck | default(omit) }}"
+#     network: "host"
+#   when:
+#     - item.value.host_in_groups | bool
+#     - item.value.enabled | bool
+#   with_dict: "{{ glance_services }}"
+#   notify:
+#     - "Restart {{ item.key }} container"
+
+- name: Create glance-api service
+  vars:
+    container_image_list: 
+      - "{{ dict_item.value.image }}"
+    container_name: "{{ dict_item.value.container_name }}"
+    container_run_args: >-
+      --label "io.containers.autoupdate=image"
+      -v "{{ node_config_directory }}/glance-api/:{{ container_config_directory }}/:ro"
+      -v "/etc/localtime:/etc/localtime:ro"
+      -v "kolla_logs:/var/log/kolla"
+      -v "{{ glance_file_datadir_volume }}:/var/lib/glance/"
+      --env  no_proxy="localhost,127.0.0.1"
+      --env  http_proxy=""
+      --env  https_proxy=""
+      --env KOLLA_CONFIG_STRATEGY=COPY_ALWAYS
+      --privileged
+      --network host
+    container_state: running
+  include_role:
+    name: podman-container-systemd
+  when:
+    - inventory_hostname in groups[dict_item.value.group]
+    - dict_item.value.enabled | bool
+    - dict_item.key == "glance-api"
+  with_dict: "{{ glance_services }}"
+  loop_control:
+    loop_var: dict_item
+
+
+- name: Create glance-tls-proxy service
+  vars:
+    container_image_list: 
+      - "{{ dict_item.value.image }}"
+    container_name: "{{ dict_item.value.container_name }}"
+    container_run_args: >-
+      --label "io.containers.autoupdate=image"
+      -v "{{ node_config_directory }}/glance-tls-proxy/:{{ container_config_directory }}/:ro"
+      -v "/etc/localtime:/etc/localtime:ro"
+      -v "kolla_logs:/var/log/kolla"
+      --env KOLLA_CONFIG_STRATEGY=COPY_ALWAYS
+      --privileged
+      --network host
+    container_state: running
+  include_role:
+    name: podman-container-systemd
+  when:
+    - inventory_hostname in groups[dict_item.value.group]
+    - dict_item.value.enabled | bool
+    - dict_item.key == "glance-tls-proxy"
+  with_dict: "{{ glance_services }}"
+  loop_control:
+    loop_var: dict_item

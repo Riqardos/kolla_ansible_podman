@@ -6,6 +6,17 @@
     common_options: "{{ docker_common_options }}"
     image: "{{ item.value.image }}"
   when:
+    - kolla_container_engine == 'docker'
+    - item.value.enabled | bool
+    - item.value.host_in_groups | bool
+  with_dict: "{{ neutron_services }}"
+
+- name: Pulling neutron images
+  become: true
+  podman_image:
+    name: "{{ item.value.image }}"
+  when:
+    - kolla_container_engine == 'podman'
     - item.value.enabled | bool
     - item.value.host_in_groups | bool
   with_dict: "{{ neutron_services }}"

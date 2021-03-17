@@ -6,6 +6,10 @@
     common_options: "{{ docker_common_options }}"
     name: "{{ project_name }}"
   register: rabbitmq_volume
+  when:
+    - kolla_container_engine == 'docker'
+
+
 
 - name: Running RabbitMQ bootstrap container
   vars:
@@ -23,4 +27,27 @@
     name: "{{ project_name }}_bootstrap"
     restart_policy: no
     volumes: "{{ service.volumes }}"
-  when: rabbitmq_volume is changed
+  when: 
+    - rabbitmq_volume is changed or rabbitmq_volume_podman is changed
+    - kolla_container_engine == 'docker'
+
+- name: Running RabbitMQ bootstrap container
+  vars:
+    service_name: "rabbitmq"
+    service: "{{ rabbitmq_services[service_name] }}"
+  become: true
+  containers.podman.podman_container:
+    state: started
+    detach: False
+    #action: "recreate_or_restart_container"
+    #common_options: "{{ docker_common_options }}"
+    name: "{{ project_name }}_bootstrap"
+    image: "{{ service.image }}"
+    labels:
+      BOOTSTRAP:
+    volumes: "{{ service.volumes }}"
+    env: "{{ service.bootstrap_environment }}"
+    #dimensions: "{{ service.dimensions }}"
+  when: 
+    - rabbitmq_volume is changed
+    - kolla_container_engine == 'podman'

@@ -6,6 +6,20 @@
     common_options: "{{ docker_common_options }}"
     image: "{{ item.value.image }}"
   when:
+    - kolla_container_engine == 'docker'
     - item.value.host_in_groups | bool
     - item.value.enabled | bool
   with_dict: "{{ glance_services }}"
+
+# Podman pull
+- name: Pulling glance images using podman
+  # become: true
+  podman_image:
+    name: "{{ item.value.image }}"
+    # common_options: "{{ docker_common_options }}"
+  when:
+    - kolla_container_engine == 'podman'
+    - item.value.host_in_groups | bool
+    - item.value.enabled | bool
+  with_dict: "{{ glance_services }}"
+

@@ -8,5 +8,17 @@
     common_options: "{{ docker_common_options }}"
     image: "{{ service.image }}"
   when:
+    - kolla_container_engine == 'docker'
+    - inventory_hostname in groups[service.group]
+    - service.enabled | bool
+
+- name: Pulling memcached image using podman 
+  vars:
+    service: "{{ memcached_services.memcached }}"
+  become: true
+  podman_image:
+    name: "{{ service.image }}"
+  when:
+    - kolla_container_engine == 'podman'
     - inventory_hostname in groups[service.group]
     - service.enabled | bool

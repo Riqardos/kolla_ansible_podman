@@ -6,6 +6,16 @@
       - ovn_nb_db
       - ovn_sb_db
   register: container_facts
+  when: kolla_container_engine == 'docker'
+
+- name: Get container facts
+  become: true
+  kolla_container_facts_podman:
+    name:
+      - ovn_nb_db
+      - ovn_sb_db
+  register: container_facts
+  when: kolla_container_engine == 'podman'
 
 - name: Checking free port for OVN northbound db
   wait_for:

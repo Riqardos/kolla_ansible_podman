@@ -12,6 +12,22 @@
   when:
     - item.value.enabled | bool
     - item.value.host_in_groups | bool
+    - kolla_container_engine == "docker"
   with_dict: "{{ openvswitch_services }}"
   notify:
     - "Restart {{ item.key }} container"
+
+- name: Check openvswitch containers
+  become: true
+  containers.podman.podman_container:
+    network: "host"
+    name: "{{ item.value.container_name }}"
+    image: "{{ item.value.image }}"
+    privileged: "{{ item.value.privileged | default(False) }}"
+    volumes: "{{ item.value.volumes }}"
+  when:
+    - item.value.enabled | bool
+    - item.value.host_in_groups | bool
+    - kolla_container_engine == "podman"
+  with_dict: "{{ openvswitch_services }}"
+    

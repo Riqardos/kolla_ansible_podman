@@ -19,6 +19,7 @@ common_services:
     environment:
       ANSIBLE_NOCOLOR: "1"
       ANSIBLE_LIBRARY: "/usr/share/ansible"
+      KOLLA_CONFIG_STRATEGY: "{{ config_strategy }}"
     privileged: True
     volumes: "{{ kolla_toolbox_default_volumes + kolla_toolbox_extra_volumes }}"
     dimensions: "{{ kolla_toolbox_dimensions }}"
@@ -30,6 +31,7 @@ common_services:
     image: "{{ cron_image_full }}"
     environment:
       DUMMY_ENVIRONMENT: kolla_useless_env
+      KOLLA_CONFIG_STRATEGY: "{{ config_strategy }}"
     volumes: "{{ cron_default_volumes + cron_extra_volumes }}"
     dimensions: "{{ cron_dimensions }}"
 
@@ -77,7 +79,7 @@ kolla_toolbox_default_volumes:
   - "/etc/localtime:/etc/localtime:ro"
   - "{{ '/etc/timezone:/etc/timezone:ro' if ansible_os_family == 'Debian' else '' }}"
   - "/dev/:/dev/"
-  - "/run/:/run/:shared"
+  - "{{ '/run/:/run/:shared' if kolla_container_engine == 'docker' else ''}}" # not working with podman for some reason
   - "kolla_logs:/var/log/kolla/"
 cron_default_volumes:
   - "{{ node_config_directory }}/cron/:{{ container_config_directory }}/:ro"

@@ -11,6 +11,15 @@
     name:
       - influxdb
   register: container_facts
+  when: kolla_container_engine == 'podman'
+
+- name: Get container facts
+  become: true
+  kolla_container_facts_podman:
+    name:
+      - influxdb
+  register: container_facts
+  when: kolla_container_engine == 'podman'
 
 - name: Checking free port for Influxdb Http
   wait_for:

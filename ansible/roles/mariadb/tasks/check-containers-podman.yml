@@ -1,0 +1,47 @@
+---
+
+- name: Create mariadb service
+  vars:
+    container_image_list: 
+      - "{{ mariadb_services.mariadb.image }}"
+    container_name: "{{ mariadb_services.mariadb.container_name }}"
+    container_run_args: >-
+      --label "io.containers.autoupdate=image"
+      -v "{{ node_config_directory }}/mariadb/:{{ container_config_directory }}/:ro"
+      -v "/etc/localtime:/etc/localtime:ro"
+      -v "kolla_logs:/var/log/kolla"
+      -v "mariadb:/var/lib/mysql"
+      --env KOLLA_CONFIG_STRATEGY=COPY_ALWAYS
+      --privileged
+      --network host
+    container_state: running
+  include_role:
+    name: podman-container-systemd
+
+- name: Create mariadb-clustercheck service
+  vars:
+    container_image_list: 
+      - "{{ dict_item.value.image }}"
+    container_name: "{{ dict_item.value.container_name }}"
+    container_run_args: >-
+      --label "io.containers.autoupdate=image"
+      -v "{{ node_config_directory }}/mariadb-clustercheck/:{{ container_config_directory }}/:ro"
+      -v "/etc/localtime:/etc/localtime:ro"
+      -v "kolla_logs:/var/log/kolla"
+      --env KOLLA_CONFIG_STRATEGY=COPY_ALWAYS
+      --env MYSQL_USERNAME="haproxy"
+      --env MYSQL_PASSWORD=""
+      --env MYSQL_HOST="{{ api_interface_address }}"
+      --env AVAILABLE_WHEN_DONOR="1"
+      --privileged
+      --network host
+    container_state: running
+  include_role:
+    name: podman-container-systemd
+  when:
+    - inventory_hostname in groups[dict_item.value.group]
+    - dict_item.value.enabled | bool
+    - dict_item.key == "mariadb-clustercheck"
+  with_dict: "{{ mariadb_services }}"
+  loop_control:
+    loop_var: dict_item

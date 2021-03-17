@@ -20,6 +20,24 @@
       - prometheus_elasticsearch_exporter
       - prometheus_blackbox_exporter
   register: container_facts
+  when: kolla_container_engine == 'docker'
+
+- name: Get container facts
+  become: true
+  kolla_container_facts_podman:
+    name:
+      - prometheus_server
+      - prometheus_node_exporter
+      - prometheus_haproxy_exporter
+      - prometheus_memcached_exporter
+      - prometheus_mysqld_exporter
+      - prometheus_cadvisor
+      - prometheus_alertmanager
+      - prometheus_openstack_exporter
+      - prometheus_elasticsearch_exporter
+      - prometheus_blackbox_exporter
+  register: container_facts
+  when: kolla_container_engine == 'podman'
 
 - name: Checking free port for Prometheus server
   wait_for:

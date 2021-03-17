@@ -5,6 +5,15 @@
     name:
       - keystone_fernet
   register: container_facts
+  when: kolla_container_engine == 'docker'
+
+- name: Checking for any running keystone_fernet containers
+  become: true
+  kolla_container_facts_podman:
+    name:
+      - keystone_fernet
+  register: container_facts
+  when: kolla_container_engine == 'podmand'
 
 # FIXME(mgoddard): This does not catch some cases we might consider
 # bootstrapped:

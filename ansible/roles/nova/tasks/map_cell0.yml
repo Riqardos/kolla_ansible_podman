@@ -22,5 +22,5 @@
   run_once: True
   delegate_to: "{{ groups[nova_api.group][0] }}"
 
-- include_tasks: bootstrap_service.yml
+- include_tasks: bootstrap_service_docker.yml
   when: map_cell0.changed

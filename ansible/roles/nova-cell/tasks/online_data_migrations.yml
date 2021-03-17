@@ -16,4 +16,24 @@
     name: "nova_cell_online_data_migrations"
     restart_policy: "no"
     volumes: "{{ nova_cell_bootstrap_default_volumes + nova_cell_bootstrap_extra_volumes }}"
-  when: inventory_hostname == groups[nova_cell_conductor_group][0]
+  when: 
+    - inventory_hostname == groups[nova_cell_conductor_group][0]
+    - kolla_container_engine == 'docker'
+
+- name: Run Nova cell online database migrations podman
+  vars:
+    nova_conductor: "{{ nova_cell_services['nova-conductor'] }}"
+  become: true
+  containers.podman.podman_container:
+    detach: False
+    env:
+      KOLLA_OSM:
+      KOLLA_CONFIG_STRATEGY: "{{ config_strategy }}"
+    image: "{{ nova_conductor.image }}"
+    labels:
+      BOOTSTRAP:
+    name: "nova_cell_online_data_migrations"
+    volumes: "{{ nova_cell_bootstrap_default_volumes + nova_cell_bootstrap_extra_volumes }}"
+  when:
+    - inventory_hostname == groups[nova_cell_conductor_group][0]
+    - kolla_container_engine == 'podman'

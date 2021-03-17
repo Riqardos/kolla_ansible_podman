@@ -1,0 +1,127 @@
+---
+# - name: Check keystone containers
+#   become: true
+#   containers.podman.podman_container:
+#     name: "{{ item.value.container_name }}"
+#     image: "{{ item.value.image }}"
+#     volumes: "{{ item.value.volumes|reject('equalto', '')|list }}"
+#     healthcheck: "{{ item.value.healthcheck | default(omit) }}"
+#     network: "host"
+#     env:
+#       KOLLA_CONFIG_STRATEGY: "{{ config_strategy }}"
+#   when:
+#     - inventory_hostname in groups[item.value.group]
+#     - item.value.enabled | bool
+#   with_dict: "{{ keystone_services }}"
+
+
+- name: Create keystone service
+  vars:
+    container_image_list: 
+      - "{{ keystone_services.keystone.image }}"
+    container_name: "{{ keystone_services.keystone.container_name }}"
+    container_run_args: >-
+      --label "io.containers.autoupdate=image"
+      -v "{{ node_config_directory }}/keystone/:{{ container_config_directory }}/:ro"
+      -v "/etc/localtime:/etc/localtime:ro"
+      -v "kolla_logs:/var/log/kolla"
+      -v "{{ kolla_dev_repos_directory ~ '/keystone/keystone:/var/lib/kolla/venv/lib/python' ~ distro_python_version ~ '/site-packages/keystone' if keystone_dev_mode | bool else '' }}"
+      "{% if keystone_token_provider == 'fernet' %}-v keystone_fernet_tokens:/etc/keystone/fernet-keys{% endif %}"
+      --env KOLLA_CONFIG_STRATEGY=COPY_ALWAYS
+      "{% if keystone_enable_healthchecks | bool %}--health-cmd {{ keystone_healthcheck_test }}{% else %}NONE{% endif %}"
+      --health-interval={{ keystone_healthcheck_interval }}
+      --health-retries={{ keystone_healthcheck_retries }}
+      --health-start-period={{ keystone_healthcheck_start_period }}
+      --health-timeout={{ keystone_healthcheck_timeout }}
+      --privileged
+      --network host
+    container_state: running
+  include_role:
+    name: podman-container-systemd
+  when:
+    - inventory_hostname in groups[keystone_services.keystone.group]
+    - keystone_services.keystone.enabled | bool
+
+
+- name: Create keystone service
+  vars:
+    container_image_list: 
+      - "{{ keystone_services.keystone.image }}"
+    container_name: "{{ keystone_services.keystone.container_name }}"
+    container_run_args: >-
+      --label "io.containers.autoupdate=image"
+      -v "{{ node_config_directory }}/keystone/:{{ container_config_directory }}/:ro"
+      -v "/etc/localtime:/etc/localtime:ro"
+      -v "kolla_logs:/var/log/kolla"
+      -v "keystone_fernet_tokens:/etc/keystone/fernet-keys"
+      "{% if keystone_enable_healthchecks | bool %}--health-cmd={{ keystone_healthcheck_test }}{% else %}NONE{% endif %}"
+      --health-interval={{ keystone_healthcheck_interval }}s
+      --health-retries={{ keystone_healthcheck_retries }}
+      --health-start-period={{ keystone_healthcheck_start_period }}s
+      --health-timeout={{ keystone_healthcheck_timeout }}s
+      --env KOLLA_CONFIG_STRATEGY=COPY_ALWAYS
+      --privileged
+      --network host
+    # "{% if keystone_dev_mode | bool %}-v {{ kolla_dev_repos_directory ~ '/keystone/keystone:/var/lib/kolla/venv/lib/python' ~ distro_python_version ~ '/site-packages/keystone' }}{% endif %}"
+    container_state: running
+  include_role:
+    name: podman-container-systemd
+  when:
+    - inventory_hostname in groups[keystone_services.keystone.group]
+    - keystone_services.keystone.enabled | bool
+
+- name: Create keystone-ssh service
+  vars:
+    container_image_list: 
+      - "{{ dict_item.value.image }}"
+    container_name: "{{ dict_item.value.container_name }}"
+    container_run_args: >-
+      --label "io.containers.autoupdate=image"
+      -v "{{ node_config_directory }}/keystone-ssh/:{{ container_config_directory }}/:ro"
+      -v "/etc/localtime:/etc/localtime:ro"
+      -v "kolla_logs:/var/log/kolla"
+      -v "keystone_fernet_tokens:/etc/keystone/fernet-keys"
+      "{% if keystone_enable_healthchecks | bool %}--health-cmd={{ keystone_healthcheck_test }}{% else %}NONE{% endif %}"
+      --health-interval={{ keystone_healthcheck_interval }}s
+      --health-retries={{ keystone_healthcheck_retries }}
+      --health-start-period={{ keystone_healthcheck_start_period }}s
+      --health-timeout={{ keystone_healthcheck_timeout }}s
+      --env KOLLA_CONFIG_STRATEGY=COPY_ALWAYS
+      --privileged
+      --network host
+    container_state: running
+  include_role:
+    name: podman-container-systemd
+  when:
+    - inventory_hostname in groups[dict_item.value.group]
+    - dict_item.value.enabled | bool
+    - dict_item.key == "keystone-ssh"
+  with_dict: "{{ keystone_services }}"
+  loop_control:
+    loop_var: dict_item
+
+
+- name: Create keystone-fernet service
+  vars:
+    container_image_list: 
+      - "{{ dict_item.value.image }}"
+    container_name: "{{ dict_item.value.container_name }}"
+    container_run_args: >-
+      --label "io.containers.autoupdate=image"
+      -v "{{ node_config_directory }}/keystone-fernet/:{{ container_config_directory }}/:ro"
+      -v "/etc/localtime:/etc/localtime:ro"
+      -v "kolla_logs:/var/log/kolla"
+      -v "keystone_fernet_tokens:/etc/keystone/fernet-keys"
+      --env KOLLA_CONFIG_STRATEGY=COPY_ALWAYS
+      --privileged
+      --network host
+    container_state: running
+  include_role:
+    name: podman-container-systemd
+  when:
+    - inventory_hostname in groups[dict_item.value.group]
+    - dict_item.value.enabled | bool
+    - dict_item.key == "keystone-fernet"
+  with_dict: "{{ keystone_services }}"
+  loop_control:
+    loop_var: dict_item

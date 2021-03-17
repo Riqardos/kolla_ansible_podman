@@ -1,0 +1,19 @@
+---
+- name: Running placement bootstrap container
+  vars:
+    placement_api: "{{ placement_services['placement-api'] }}"
+  become: true
+  containers.podman.podman_container:
+    detach: False
+    env:
+      KOLLA_BOOTSTRAP:
+      KOLLA_CONFIG_STRATEGY: "{{ config_strategy }}"
+    image: "{{ placement_api.image }}"
+    labels:
+      BOOTSTRAP:
+    name: "bootstrap_placement"
+    volumes: "{{ placement_api.volumes|reject('equalto', '')|list }}"
+    network: "host"
+    rm: true
+  run_once: True
+  delegate_to: "{{ groups[placement_api.group][0] }}"

@@ -1,0 +1,40 @@
+---
+- name: Create cell script
+  vars:
+    nova_cell0_connection: mysql+pymysql://{{ nova_cell0_database_user }}:{{ nova_cell0_database_password }}@{{ nova_cell0_database_address }}/{{ nova_cell0_database_name }} # noqa 204
+  become: true
+  copy:
+    content: "export KOLLA_CONFIG_STRATEGY=COPY_ALWAYS;sudo -E kolla_set_configs; nova-manage cell_v2 map_cell0 --database_connection {{ nova_cell0_connection }}"
+    dest: "/etc/kolla/nova-api-bootstrap/script.sh"
+    mode: "0777"
+    
+# - name: Copy custom file
+#   ansible.builtin.copy:
+#     src: script.sh
+#     dest: /etc/kolla/nova-api-bootstrap/
+#     mode: "0777"
+
+- name: Create cell0 mappings
+  vars:
+    nova_api: "{{ nova_services['nova-api'] }}"
+    nova_cell0_connection: mysql+pymysql://{{ nova_cell0_database_user }}:{{ nova_cell0_database_password }}@{{ nova_cell0_database_address }}/{{ nova_cell0_database_name }}" # noqa 204
+  become: true
+  containers.podman.podman_container:
+    command: bash -c /var/lib/kolla/config_files/script.sh
+    rm: yes
+    detach: False
+    image: "{{ nova_api.image }}"
+    labels:
+      BOOTSTRAP:
+    name: "nova_api_map_cell0"
+    volumes: "{{ nova_api_bootstrap_default_volumes + nova_api_bootstrap_extra_volumes }}"
+    network: "host"
+  register: map_cell0
+  changed_when:
+    - map_cell0 is success
+    - '"Cell0 is already setup" not in map_cell0.stdout'
+  run_once: True
+  delegate_to: "{{ groups[nova_api.group][0] }}"
+
+- include_tasks: bootstrap_service_podman.yml
+  when: map_cell0.changed

@@ -60,7 +60,7 @@
   notify:
     - Restart fake neutron-openvswitch-agent container
 
-- name: Checking neutron-openvswitch-agent container for nova fake node
+- name: Checking neutron-openvswitch-agent container for nova fake node docker
   vars:
     neutron_openvswitch_agent: "{{ neutron_services['neutron-openvswitch-agent'] }}"
   become: true

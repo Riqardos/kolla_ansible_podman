@@ -15,3 +15,20 @@
     healthcheck: "{{ service.healthcheck | default(omit) }}"
   when:
     - kolla_action != "config"
+    - kolla_container_engine == 'docker'
+
+- name: Restart horizon container Podman
+  vars:
+    service_name: "horizon"
+    service: "{{ horizon_services[service_name] }}"
+  become: true
+  containers.podman.podman_container:
+    force_restart: yes
+    name: "{{ service.container_name }}"
+    image: "{{ service.image }}"
+    env: "{{ service.environment }}"
+    volumes: "{{ service.volumes }}"
+    healthcheck: "{{ service.healthcheck | default(omit) }}"
+  when:
+    - kolla_action != "config"
+    - kolla_container_engine == 'podman'

@@ -11,6 +11,15 @@
     name:
       - mistral_api
   register: container_facts
+  when: kolla_container_engine == 'docker'
+
+- name: Get container facts
+  become: true
+  kolla_container_facts_podman:
+    name:
+      - mistral_api
+  register: container_facts
+  when: kolla_container_engine == 'podman'
 
 - name: Checking free port for Mistral API
   wait_for:

@@ -56,6 +56,14 @@
 #kolla_sysctl_conf_path: /etc/sysctl.conf
 
 ################
+# Container engine
+################
+
+# Valid options are [ docker, podman ]
+kolla_container_engine: podman
+
+
+################
 # Docker options
 ################
 

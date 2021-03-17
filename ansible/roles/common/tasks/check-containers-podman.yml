@@ -1,0 +1,93 @@
+---
+- name: Creating log volume
+  #become: true
+  containers.podman.podman_volume:
+    name: "kolla_logs"
+    state: present
+  when: inventory_hostname in groups['kolla-logs']
+
+# - name: Check common containers
+#   become: true
+#   containers.podman.podman_container:
+#     name: "{{ dict_item.value.container_name }}"
+#     image: "{{ dict_item.value.image }}"
+#     volumes: "{{ dict_item.value.volumes }}"
+#     privileged: "{{ dict_item.value.privileged | default(False) }}"
+#     network: "host"
+#     env: 
+#       "{{ dict_item.value.environment }}"    
+#   when:
+#     - dict_item.value | service_enabled_and_mapped_to_host
+#   with_dict: "{{ common_services }}"
+#   notify:
+#     - "Restart {{ dict_item.key }} container"
+
+- name: Create fluentd service
+  vars:
+    container_image_list: 
+      - "{{ common_services.fluentd.image }}"
+    container_name: "{{ common_services.fluentd.container_name }}"
+    container_run_args: >-
+      --label "io.containers.autoupdate=image"
+      --env KOLLA_CONFIG_STRATEGY=COPY_ALWAYS
+      --privileged
+      --network host
+      -v "{{ node_config_directory }}/fluentd/:{{ container_config_directory }}/:ro"
+      -v "/etc/localtime:/etc/localtime:ro"
+      -v "kolla_logs:/var/log/kolla"
+      -v "fluentd_data:/var/lib/fluentd/data/"
+     # "{% for vol in {{ common_services.fluentd.volumes|reject('equalto', '')|list }} %} -v {{vol}}{% endfor %}"
+    container_state: running
+  include_role:
+    name: podman-container-systemd
+  when:
+    - inventory_hostname in groups[common_services.fluentd.group]
+    - common_services.fluentd.enabled | bool
+
+- name: Create kolla-toolbox service
+  vars:
+    container_image_list: 
+      - "{{ dict_item.value.image }}"
+    container_name: "{{ dict_item.value.container_name }}"
+    container_run_args: >-
+      --label "io.containers.autoupdate=image"
+      -v "{{ node_config_directory }}/kolla-toolbox/:{{ container_config_directory }}/:ro"
+      -v "/etc/localtime:/etc/localtime:ro"
+      -v "kolla_logs:/var/log/kolla"
+      -v "/dev/:/dev/"
+      --env KOLLA_CONFIG_STRATEGY=COPY_ALWAYS
+      --env ANSIBLE_NOCOLOR:"1"
+      --env ANSIBLE_LIBRARY:"/usr/share/ansible"
+      --privileged
+      --network host
+     # -v "/run/:/run/:shared" raising "no such file or directory: OCI not found" error
+    container_state: running
+  include_role:
+    name: podman-container-systemd
+  when:
+    - inventory_hostname in groups[dict_item.value.group]
+    - dict_item.value.enabled | bool
+    - dict_item.key == "kolla-toolbox"
+  with_dict: "{{ common_services }}"
+  loop_control:
+    loop_var: dict_item
+
+- name: Create cron service
+  vars:
+    container_image_list: 
+      - "{{ common_services.cron.image }}"
+    container_name: "{{ common_services.cron.container_name }}"
+    container_run_args: >-
+      --label "io.containers.autoupdate=image"
+      -v "{{ node_config_directory }}/cron/:{{ container_config_directory }}/:ro"
+      -v "/etc/localtime:/etc/localtime:ro"
+      -v "kolla_logs:/var/log/kolla"
+      --env KOLLA_CONFIG_STRATEGY=COPY_ALWAYS
+      --privileged
+      --network host
+    container_state: running
+  include_role:
+    name: podman-container-systemd
+  when:
+    - inventory_hostname in groups[common_services.cron.group]
+    - common_services.cron.enabled | bool

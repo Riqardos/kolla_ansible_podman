@@ -13,6 +13,17 @@
       - ironic_inspector
       - ironic_ipxe
   register: container_facts
+  when: kolla_container_engine == 'docker'
+
+- name: Get container facts
+  become: true
+  kolla_container_facts_podman:
+    name:
+      - ironic_api
+      - ironic_inspector
+      - ironic_ipxe
+  register: container_facts
+  when: kolla_container_engine == 'podman'
 
 - name: Checking free port for Ironic API
   wait_for:

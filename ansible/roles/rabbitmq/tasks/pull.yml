@@ -6,6 +6,18 @@
     common_options: "{{ docker_common_options }}"
     image: "{{ item.value.image }}"
   when:
+    - kolla_container_engine == 'docker'
+    - inventory_hostname in groups[item.value.group]
+    - item.value.enabled | bool
+  with_dict: "{{ rabbitmq_services }}"
+
+- name: Pulling rabbitmq image using podman
+  become: true
+  podman_image:
+    name: "{{ item.value.image }}"
+    # common_options: "{{ docker_common_options }}"
+  when:
+    - kolla_container_engine == 'podman'
     - inventory_hostname in groups[item.value.group]
     - item.value.enabled | bool
   with_dict: "{{ rabbitmq_services }}"
