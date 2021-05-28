@@ -18,3 +18,4 @@
     rm: yes
   run_once: True
   delegate_to: "{{ groups[neutron_server.group][0] }}"
+  notify: Restart neutron-server container
